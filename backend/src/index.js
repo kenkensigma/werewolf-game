@@ -2,6 +2,7 @@ const express = require("express");
 const http = require("http");
 const cors = require("cors");
 const { Server } = require("socket.io");
+const { registerRoomHandlers } = require("./socket/roomHandlers.js");
 require("dotenv").config();
 
 const app = express();
@@ -30,6 +31,8 @@ io.on("connection", (socket) => {
   socket.emit("server:welcome", {
     message: "Connected to Werewolf server!",
   });
+
+  registerRoomHandlers(io, socket);
 
   socket.on("client:ping", (data, callback) => {
     const timestamp = Date.now();
