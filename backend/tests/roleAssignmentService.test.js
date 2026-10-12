@@ -117,5 +117,9 @@ describe("RoleAssignmentService & GameStateService Tests", () => {
     const updatedState = gameStateService.acknowledgeRole(game.id, "player-1");
     const playerOnePublic = updatedState.players.find((p) => p.id === "player-1");
     expect(playerOnePublic.isReady).toBe(true);
+
+    // Test rematch reset
+    gameStateService.resetGameForRematch("ROOM88");
+    expect(gameStateService.getGameByRoomCode("ROOM88")).toBeNull();
   });
 });

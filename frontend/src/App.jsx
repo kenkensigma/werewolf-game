@@ -5,6 +5,7 @@ import { LandingScreen } from "./features/landing/LandingScreen.jsx";
 import { LobbyScreen } from "./features/lobby/LobbyScreen.jsx";
 import { RoleRevealScreen } from "./features/role-reveal/RoleRevealScreen.jsx";
 import { ActiveGameView } from "./features/gameplay/ActiveGameView.jsx";
+import { GameOverScreen } from "./features/gameplay/GameOverScreen.jsx";
 import "./App.css";
 
 const SESSION_STORAGE_KEY = "werewolf_player_session";
@@ -32,6 +33,7 @@ function App() {
   const [submittedNightTargetId, setSubmittedNightTargetId] = useState(null);
   const [seerInvestigationResult, setSeerInvestigationResult] = useState(null);
   const [latestElimination, setLatestElimination] = useState(null);
+  const [isRematching, setIsRematching] = useState(false);
 
   // Resume stored session on mount if available
   useEffect(() => {
@@ -145,6 +147,21 @@ function App() {
       setGameState(finalState);
     };
 
+    const handleGameRematch = ({ room }) => {
+      setGameState(null);
+      setPrivateRole(null);
+      setIsRoleAcknowledged(false);
+      setChatMessages([]);
+      setVotingState(null);
+      setLatestVotingResult(null);
+      setSubmittedNightTargetId(null);
+      setSeerInvestigationResult(null);
+      setLatestElimination(null);
+      if (room) {
+        setCurrentRoom(room);
+      }
+    };
+
     socket.on("connect", handleConnect);
     socket.on("disconnect", handleDisconnect);
     socket.on("connect_error", handleConnectError);
@@ -159,6 +176,7 @@ function App() {
     socket.on(SOCKET_EVENTS.NIGHT_SEER_RESULT, handleNightSeerResult);
     socket.on(SOCKET_EVENTS.GAME_ELIMINATION, handleGameElimination);
     socket.on(SOCKET_EVENTS.GAME_OVER, handleGameOver);
+    socket.on(SOCKET_EVENTS.GAME_REMATCH, handleGameRematch);
 
     if (socket.connected) {
       handleConnect();
@@ -179,6 +197,7 @@ function App() {
       socket.off(SOCKET_EVENTS.NIGHT_SEER_RESULT, handleNightSeerResult);
       socket.off(SOCKET_EVENTS.GAME_ELIMINATION, handleGameElimination);
       socket.off(SOCKET_EVENTS.GAME_OVER, handleGameOver);
+      socket.off(SOCKET_EVENTS.GAME_REMATCH, handleGameRematch);
     };
   }, []);
 
@@ -408,13 +427,50 @@ function App() {
     setLatestElimination(null);
   }, []);
 
+  // Dev Trigger Match Victory (Host)
+  const handleDevTriggerVictory = useCallback((winnerFaction) => {
+    const socket = getSocket();
+    if (!socket.connected) return;
+
+    socket.emit("game:dev-trigger-victory", { winnerFaction });
+  }, []);
+
+  // Rematch Action (Host)
+  const handleRematch = useCallback(() => {
+    const socket = getSocket();
+    if (!socket.connected) return;
+
+    setIsRematching(true);
+    socket.emit(SOCKET_EVENTS.GAME_REMATCH, {}, (response) => {
+      setIsRematching(false);
+      if (response?.success) {
+        setGameState(null);
+        setPrivateRole(null);
+        setIsRoleAcknowledged(false);
+        setChatMessages([]);
+        setVotingState(null);
+        setLatestVotingResult(null);
+        setSubmittedNightTargetId(null);
+        setSeerInvestigationResult(null);
+        setLatestElimination(null);
+        if (response.room) {
+          setCurrentRoom(response.room);
+        }
+      } else {
+        setErrorMessage(response?.error || "Could not commence rematch");
+      }
+    });
+  }, []);
+
   // Determine current active view
   const isLobbyView = currentRoom && currentRoom.status === PHASES.LOBBY && !gameState;
   const isRoleRevealPhase = gameState?.phase === PHASES.ROLE_REVEAL;
+  const isGameOverPhase = gameState?.phase === PHASES.GAME_OVER;
   const isActiveGamePhase =
     gameState &&
     gameState.phase !== PHASES.LOBBY &&
-    gameState.phase !== PHASES.ROLE_REVEAL;
+    gameState.phase !== PHASES.ROLE_REVEAL &&
+    gameState.phase !== PHASES.GAME_OVER;
 
   return (
     <div className="app-shell">
@@ -483,6 +539,18 @@ function App() {
             onDismissSeerResult={handleDismissSeerResult}
             latestElimination={latestElimination}
             onDismissElimination={handleDismissElimination}
+            onDevTriggerVictory={handleDevTriggerVictory}
+          />
+        )}
+
+        {isGameOverPhase && (
+          <GameOverScreen
+            gameState={gameState}
+            currentPlayer={currentPlayer}
+            isHost={currentPlayer?.isHost}
+            onRematch={handleRematch}
+            onLeaveRoom={handleLeaveRoom}
+            isRematching={isRematching}
           />
         )}
       </main>

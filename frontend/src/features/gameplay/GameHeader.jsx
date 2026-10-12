@@ -9,6 +9,7 @@ export function GameHeader({
   phaseDeadline,
   isHost,
   onProceedToVote,
+  onDevTriggerVictory,
 }) {
   const [secondsRemaining, setSecondsRemaining] = useState(0);
 
@@ -117,6 +118,18 @@ export function GameHeader({
             title="Conclude discussion and open voting immediately"
           >
             Commence Voting
+          </button>
+        )}
+
+        {isHost && onDevTriggerVictory && (
+          <button
+            type="button"
+            className="gothic-btn gothic-btn-outline"
+            style={{ fontSize: "11px", padding: "4px 8px", minHeight: "32px" }}
+            onClick={() => onDevTriggerVictory("VILLAGE")}
+            title="Dev: Trigger Village Victory"
+          >
+            Dev: Village Win
           </button>
         )}
       </div>

@@ -29,6 +29,7 @@ export function ActiveGameView({
   onDismissSeerResult,
   latestElimination,
   onDismissElimination,
+  onDevTriggerVictory,
 }) {
   const [selectedCandidateId, setSelectedCandidateId] = useState(null);
   const [isSkipSelected, setIsSkipSelected] = useState(false);
@@ -87,6 +88,7 @@ export function ActiveGameView({
         phaseDeadline={gameState?.phaseDeadline}
         isHost={isHost}
         onProceedToVote={onProceedToVote}
+        onDevTriggerVictory={onDevTriggerVictory}
       />
 
       {/* 2. Elimination Banner for Voting Results or Night Notices */}
