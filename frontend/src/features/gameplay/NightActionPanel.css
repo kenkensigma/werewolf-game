@@ -1,0 +1,150 @@
+.night-action-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  padding: 1.5rem;
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  border: 1px solid var(--color-gold-border);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+  transition: border-color var(--motion-standard) var(--ease-standard);
+}
+
+.night-action-panel.role-werewolf {
+  border-color: rgba(141, 52, 59, 0.5);
+  box-shadow: 0 8px 32px rgba(141, 52, 59, 0.15);
+}
+
+.night-action-panel.role-seer {
+  border-color: rgba(120, 137, 166, 0.5);
+  box-shadow: 0 8px 32px rgba(120, 137, 166, 0.15);
+}
+
+.night-action-panel.role-guard {
+  border-color: rgba(198, 166, 107, 0.5);
+  box-shadow: 0 8px 32px rgba(198, 166, 107, 0.15);
+}
+
+.night-action-panel.role-hunter {
+  border-color: rgba(178, 66, 75, 0.4);
+}
+
+.night-flavor-text {
+  font-size: 0.95rem;
+  color: var(--color-parchment-dim);
+  line-height: 1.5;
+  margin: 0;
+}
+
+.night-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.65rem 1rem;
+  background: rgba(16, 17, 20, 0.7);
+  border: 1px solid rgba(198, 166, 107, 0.2);
+  border-radius: var(--radius-sm);
+  color: var(--color-parchment-dim);
+  font-size: 0.875rem;
+}
+
+.night-selection-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.night-target-label {
+  font-size: 0.85rem;
+  color: var(--color-gold);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.night-target-select {
+  width: 100%;
+  min-height: 44px;
+  padding: 0.5rem 0.85rem;
+  background: var(--color-void);
+  border: 1px solid rgba(198, 166, 107, 0.35);
+  border-radius: var(--radius-sm);
+  color: var(--color-ivory);
+  font-size: 0.95rem;
+  cursor: pointer;
+  outline: none;
+  transition: border-color var(--motion-fast) var(--ease-standard);
+}
+
+.night-target-select:focus {
+  border-color: var(--color-gold);
+  box-shadow: 0 0 0 2px rgba(198, 166, 107, 0.2);
+}
+
+.night-target-select option {
+  background: var(--color-surface);
+  color: var(--color-ivory);
+}
+
+.night-actions-btn-group {
+  margin-top: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.night-commit-btn {
+  width: 100%;
+  min-height: 46px;
+}
+
+.hunter-btn-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+.hunter-btn-row button {
+  min-height: 46px;
+}
+
+/* Confirmed Box */
+.night-confirmed-box {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.85rem;
+  padding: 1rem 1.15rem;
+  background: rgba(16, 26, 20, 0.6);
+  border: 1px solid rgba(75, 160, 105, 0.4);
+  border-radius: var(--radius-sm);
+  animation: fadeIn 250ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.confirmed-icon {
+  color: #5ec986;
+  flex-shrink: 0;
+  margin-top: 0.15rem;
+}
+
+.confirmed-title {
+  font-size: 1rem;
+  color: #5ec986;
+  margin: 0 0 0.25rem;
+}
+
+.confirmed-desc {
+  font-size: 0.875rem;
+  color: var(--color-parchment);
+  margin: 0;
+  line-height: 1.4;
+}
+
+.host-hasten-container {
+  margin-top: 0.5rem;
+  padding-top: 0.75rem;
+  border-top: 1px dashed rgba(198, 166, 107, 0.2);
+}
+
+.host-hasten-container button {
+  width: 100%;
+  min-height: 44px;
+}

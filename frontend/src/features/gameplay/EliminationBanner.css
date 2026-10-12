@@ -1,0 +1,88 @@
+.elimination-banner {
+  width: 100%;
+  max-width: 960px;
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-burgundy);
+  border-radius: var(--radius-sm);
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  box-shadow: var(--shadow-card);
+  margin-bottom: 20px;
+  animation: slideDownBanner var(--motion-standard) var(--ease-enter);
+}
+
+@keyframes slideDownBanner {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.elimination-banner.is-troublemaker {
+  border-color: var(--color-gold);
+  background-color: rgba(198, 166, 107, 0.12);
+}
+
+.elimination-banner.is-night-notice {
+  border-color: var(--color-moonlight);
+  background-color: rgba(120, 137, 166, 0.12);
+}
+
+.is-night-notice .banner-icon {
+  color: var(--color-moonlight);
+}
+
+.banner-content {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  text-align: left;
+}
+
+.banner-icon {
+  width: 28px;
+  height: 28px;
+  color: #D6727A;
+  flex-shrink: 0;
+}
+
+.is-troublemaker .banner-icon {
+  color: var(--color-gold);
+}
+
+.banner-title {
+  font-family: var(--font-display);
+  font-size: var(--text-sm);
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--color-ivory);
+  margin: 0 0 2px 0;
+}
+
+.banner-desc {
+  font-size: var(--text-sm);
+  color: var(--color-muted);
+  margin: 0;
+  line-height: 1.4;
+}
+
+.banner-dismiss-btn {
+  background: transparent;
+  border: 1px solid var(--color-border);
+  color: var(--color-muted);
+  font-size: var(--text-xs);
+  padding: 6px 12px;
+}
+
+.banner-dismiss-btn:hover {
+  border-color: var(--color-ivory);
+  color: var(--color-ivory);
+}

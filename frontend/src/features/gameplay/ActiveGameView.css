@@ -1,0 +1,66 @@
+.active-game-view {
+  width: 100%;
+  max-width: 960px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.gameplay-columns {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 1.1fr 1fr;
+  gap: 24px;
+}
+
+@media (max-width: 860px) {
+  .gameplay-columns {
+    grid-template-columns: 1fr;
+  }
+}
+
+.gameplay-left-col {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.gameplay-right-col {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* Night and Waiting panels */
+.night-setup-panel {
+  text-align: left;
+}
+
+.night-flavor-text {
+  font-size: var(--text-base);
+  color: var(--color-parchment);
+  line-height: 1.6;
+  margin: 12px 0 20px 0;
+}
+
+.night-waiting-box {
+  background-color: var(--color-surface-sunken);
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: 16px;
+  text-align: center;
+  color: var(--color-moonlight);
+  font-size: var(--text-sm);
+}
+
+.game-over-panel {
+  text-align: center;
+}
+
+.game-over-winner-title {
+  font-size: var(--text-xl);
+  color: var(--color-gold);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin: 16px 0 8px 0;
+}

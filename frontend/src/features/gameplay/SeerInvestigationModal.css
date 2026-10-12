@@ -1,0 +1,213 @@
+.seer-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  background: rgba(10, 11, 14, 0.88);
+  backdrop-filter: blur(8px);
+  animation: fadeIn 250ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.seer-modal-container {
+  width: 100%;
+  max-width: 420px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 2rem 1.75rem;
+  background: var(--color-surface);
+  border: 1px solid var(--color-gold-border);
+  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.8), inset 0 0 24px rgba(198, 166, 107, 0.05);
+}
+
+.seer-modal-header {
+  margin-bottom: 1.5rem;
+}
+
+.seer-modal-eyebrow {
+  display: inline-block;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  color: var(--color-moonlight);
+  margin-bottom: 0.25rem;
+}
+
+.seer-modal-title {
+  font-size: 1.5rem;
+  color: var(--color-gold);
+  margin: 0 0 0.5rem;
+}
+
+.seer-modal-desc {
+  font-size: 1rem;
+  color: var(--color-parchment-dim);
+  margin: 0;
+  line-height: 1.4;
+}
+
+.seer-target-name {
+  color: var(--color-ivory);
+}
+
+/* 3D Card Stage */
+.seer-card-stage {
+  perspective: 1200px;
+  width: 240px;
+  height: 320px;
+  margin-bottom: 1.75rem;
+}
+
+.seer-3d-card {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  transform-style: preserve-3d;
+  transition: transform 700ms cubic-bezier(0.16, 1, 0.3, 1);
+  cursor: pointer;
+  border-radius: var(--radius-md);
+  outline: none;
+}
+
+.seer-3d-card:focus-visible {
+  box-shadow: 0 0 0 3px var(--color-gold);
+}
+
+.seer-3d-card.flipped {
+  transform: rotateY(180deg);
+}
+
+.seer-card-face {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  border-radius: var(--radius-md);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem 1rem;
+  box-sizing: border-box;
+}
+
+/* Card Back */
+.seer-card-back {
+  background: radial-gradient(circle at center, #242730 0%, #131418 100%);
+  border: 2px solid var(--color-moonlight);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+  color: var(--color-moonlight);
+}
+
+.seer-card-border-ornament {
+  position: absolute;
+  inset: 6px;
+  border: 1px dashed rgba(198, 166, 107, 0.25);
+  border-radius: var(--radius-sm);
+  pointer-events: none;
+}
+
+.seer-eye-emblem {
+  margin-bottom: 1rem;
+  filter: drop-shadow(0 0 12px rgba(120, 137, 166, 0.4));
+  animation: pulseEye 3s ease-in-out infinite;
+}
+
+.seer-card-back-hint {
+  font-size: 0.85rem;
+  color: var(--color-parchment-dim);
+  font-style: italic;
+}
+
+/* Card Front */
+.seer-card-front {
+  transform: rotateY(180deg);
+  background: var(--color-surface);
+}
+
+.seer-card-front.result-werewolf {
+  border: 2px solid var(--color-burgundy-light);
+  box-shadow: 0 0 30px rgba(141, 52, 59, 0.4), inset 0 0 20px rgba(141, 52, 59, 0.2);
+  background: radial-gradient(circle at center, #2e1418 0%, #160e10 100%);
+}
+
+.seer-card-front.result-innocent {
+  border: 2px solid var(--color-moonlight);
+  box-shadow: 0 0 30px rgba(120, 137, 166, 0.35), inset 0 0 20px rgba(120, 137, 166, 0.15);
+  background: radial-gradient(circle at center, #1c222b 0%, #101317 100%);
+}
+
+.seer-result-target {
+  font-size: 1.1rem;
+  color: var(--color-ivory);
+  margin-bottom: 0.75rem;
+  letter-spacing: 0.05em;
+}
+
+.seer-result-icon {
+  margin-bottom: 0.75rem;
+}
+
+.result-werewolf .seer-result-icon {
+  color: var(--color-burgundy-light);
+  filter: drop-shadow(0 0 12px rgba(178, 66, 75, 0.6));
+}
+
+.result-innocent .seer-result-icon {
+  color: var(--color-moonlight);
+  filter: drop-shadow(0 0 12px rgba(120, 137, 166, 0.5));
+}
+
+.seer-result-badge {
+  font-size: 1.25rem;
+  letter-spacing: 0.15em;
+  padding: 0.35rem 0.85rem;
+  border-radius: var(--radius-sm);
+  margin-bottom: 0.75rem;
+}
+
+.result-werewolf .seer-result-badge {
+  background: rgba(141, 52, 59, 0.4);
+  color: #ff9da4;
+  border: 1px solid var(--color-burgundy);
+}
+
+.result-innocent .seer-result-badge {
+  background: rgba(120, 137, 166, 0.25);
+  color: #d1dcfa;
+  border: 1px solid var(--color-moonlight);
+}
+
+.seer-result-caption {
+  font-size: 0.825rem;
+  color: var(--color-parchment-dim);
+  line-height: 1.35;
+  margin: 0;
+  padding: 0 0.5rem;
+}
+
+.seer-modal-actions {
+  width: 100%;
+}
+
+.seer-modal-actions button {
+  width: 100%;
+  min-height: 48px;
+}
+
+@keyframes pulseEye {
+  0%, 100% {
+    opacity: 0.8;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.06);
+  }
+}

@@ -1,0 +1,131 @@
+.game-header {
+  width: 100%;
+  max-width: 960px;
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 16px 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+  box-shadow: var(--shadow-subtle);
+  margin-bottom: 24px;
+}
+
+.phase-info-block {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.phase-icon-frame {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--color-border);
+}
+
+.phase-night {
+  background-color: var(--color-moonlight-surface);
+  border-color: var(--color-moonlight);
+  color: var(--color-moonlight);
+}
+
+.phase-day {
+  background-color: rgba(216, 200, 168, 0.12);
+  border-color: var(--color-parchment);
+  color: var(--color-parchment);
+}
+
+.phase-voting {
+  background-color: var(--color-gold-surface);
+  border-color: var(--color-gold);
+  color: var(--color-gold);
+}
+
+.phase-game-over {
+  background-color: var(--color-burgundy-surface);
+  border-color: var(--color-burgundy);
+  color: #F5A3A9;
+}
+
+.phase-text-col {
+  display: flex;
+  flex-direction: column;
+  text-align: left;
+}
+
+.phase-cycle-label {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+}
+
+.phase-title-text {
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: var(--color-ivory);
+  margin: 0;
+  text-transform: uppercase;
+}
+
+/* Timer Display */
+.timer-block {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.countdown-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background-color: var(--color-surface-sunken);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: 8px 16px;
+}
+
+.countdown-box.is-urgent {
+  border-color: var(--color-burgundy);
+  color: #F5A3A9;
+  animation: pulseUrgent 1s infinite alternate;
+}
+
+@keyframes pulseUrgent {
+  from {
+    box-shadow: 0 0 4px rgba(141, 52, 59, 0.3);
+  }
+  to {
+    box-shadow: 0 0 14px rgba(141, 52, 59, 0.6);
+  }
+}
+
+.timer-digits {
+  font-family: var(--font-display);
+  font-size: var(--text-xl);
+  font-weight: 700;
+  min-width: 52px;
+  text-align: center;
+  color: var(--color-gold);
+}
+
+.countdown-box.is-urgent .timer-digits {
+  color: #F5A3A9;
+}
+
+.skip-discussion-btn {
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 8px 14px;
+}

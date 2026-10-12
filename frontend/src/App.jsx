@@ -4,6 +4,7 @@ import { SOCKET_EVENTS, PHASES } from "./constants/index.js";
 import { LandingScreen } from "./features/landing/LandingScreen.jsx";
 import { LobbyScreen } from "./features/lobby/LobbyScreen.jsx";
 import { RoleRevealScreen } from "./features/role-reveal/RoleRevealScreen.jsx";
+import { ActiveGameView } from "./features/gameplay/ActiveGameView.jsx";
 import "./App.css";
 
 const SESSION_STORAGE_KEY = "werewolf_player_session";
@@ -21,6 +22,16 @@ function App() {
   const [gameState, setGameState] = useState(null);
   const [privateRole, setPrivateRole] = useState(null);
   const [isRoleAcknowledged, setIsRoleAcknowledged] = useState(false);
+
+  // Discussion & Voting live state
+  const [chatMessages, setChatMessages] = useState([]);
+  const [votingState, setVotingState] = useState(null);
+  const [latestVotingResult, setLatestVotingResult] = useState(null);
+
+  // Night phase & Elimination state
+  const [submittedNightTargetId, setSubmittedNightTargetId] = useState(null);
+  const [seerInvestigationResult, setSeerInvestigationResult] = useState(null);
+  const [latestElimination, setLatestElimination] = useState(null);
 
   // Resume stored session on mount if available
   useEffect(() => {
@@ -88,6 +99,12 @@ function App() {
     const handleGameStarted = (publicGameState) => {
       setGameState(publicGameState);
       setIsRoleAcknowledged(false);
+      setChatMessages([]);
+      setVotingState(null);
+      setLatestVotingResult(null);
+      setSubmittedNightTargetId(null);
+      setSeerInvestigationResult(null);
+      setLatestElimination(null);
     };
 
     const handleGameYourRole = (rolePayload) => {
@@ -96,6 +113,36 @@ function App() {
 
     const handleGamePhase = (updatedGameState) => {
       setGameState(updatedGameState);
+      if (updatedGameState.phase === PHASES.NIGHT) {
+        setSubmittedNightTargetId(null);
+        setLatestVotingResult(null);
+      } else if (updatedGameState.phase === PHASES.DAY_DISCUSSION) {
+        setLatestVotingResult(null);
+      }
+    };
+
+    const handleDiscussionMessage = (message) => {
+      setChatMessages((prev) => [...prev, message]);
+    };
+
+    const handleVotingState = (voteProgress) => {
+      setVotingState(voteProgress);
+    };
+
+    const handleVotingResult = (result) => {
+      setLatestVotingResult(result);
+    };
+
+    const handleNightSeerResult = (result) => {
+      setSeerInvestigationResult(result);
+    };
+
+    const handleGameElimination = (elimination) => {
+      setLatestElimination(elimination);
+    };
+
+    const handleGameOver = (finalState) => {
+      setGameState(finalState);
     };
 
     socket.on("connect", handleConnect);
@@ -106,6 +153,12 @@ function App() {
     socket.on(SOCKET_EVENTS.GAME_STARTED, handleGameStarted);
     socket.on(SOCKET_EVENTS.GAME_YOUR_ROLE, handleGameYourRole);
     socket.on(SOCKET_EVENTS.GAME_PHASE, handleGamePhase);
+    socket.on(SOCKET_EVENTS.DISCUSSION_MESSAGE, handleDiscussionMessage);
+    socket.on(SOCKET_EVENTS.VOTING_STATE, handleVotingState);
+    socket.on(SOCKET_EVENTS.VOTING_RESULT, handleVotingResult);
+    socket.on(SOCKET_EVENTS.NIGHT_SEER_RESULT, handleNightSeerResult);
+    socket.on(SOCKET_EVENTS.GAME_ELIMINATION, handleGameElimination);
+    socket.on(SOCKET_EVENTS.GAME_OVER, handleGameOver);
 
     if (socket.connected) {
       handleConnect();
@@ -120,6 +173,12 @@ function App() {
       socket.off(SOCKET_EVENTS.GAME_STARTED, handleGameStarted);
       socket.off(SOCKET_EVENTS.GAME_YOUR_ROLE, handleGameYourRole);
       socket.off(SOCKET_EVENTS.GAME_PHASE, handleGamePhase);
+      socket.off(SOCKET_EVENTS.DISCUSSION_MESSAGE, handleDiscussionMessage);
+      socket.off(SOCKET_EVENTS.VOTING_STATE, handleVotingState);
+      socket.off(SOCKET_EVENTS.VOTING_RESULT, handleVotingResult);
+      socket.off(SOCKET_EVENTS.NIGHT_SEER_RESULT, handleNightSeerResult);
+      socket.off(SOCKET_EVENTS.GAME_ELIMINATION, handleGameElimination);
+      socket.off(SOCKET_EVENTS.GAME_OVER, handleGameOver);
     };
   }, []);
 
@@ -143,6 +202,7 @@ function App() {
         setGameState(null);
         setPrivateRole(null);
         setIsRoleAcknowledged(false);
+        setChatMessages([]);
         sessionStorage.setItem(
           SESSION_STORAGE_KEY,
           JSON.stringify({ token: response.sessionToken, code: response.room.roomCode })
@@ -173,6 +233,7 @@ function App() {
         setGameState(null);
         setPrivateRole(null);
         setIsRoleAcknowledged(false);
+        setChatMessages([]);
         sessionStorage.setItem(
           SESSION_STORAGE_KEY,
           JSON.stringify({ token: response.sessionToken, code: response.room.roomCode })
@@ -224,6 +285,7 @@ function App() {
     setGameState(null);
     setPrivateRole(null);
     setIsRoleAcknowledged(false);
+    setChatMessages([]);
     setErrorMessage("");
   }, []);
 
@@ -260,10 +322,99 @@ function App() {
     });
   }, []);
 
+  // Send Discussion Chat Message Action
+  const handleSendMessage = useCallback((text) => {
+    const socket = getSocket();
+    if (!socket.connected) return;
+
+    socket.emit(SOCKET_EVENTS.DISCUSSION_CHAT, { text }, (response) => {
+      if (!response?.success) {
+        setErrorMessage(response?.error || "Failed to post message");
+      }
+    });
+  }, []);
+
+  // Proceed from discussion straight to voting (Host)
+  const handleProceedToVote = useCallback(() => {
+    const socket = getSocket();
+    if (!socket.connected) return;
+
+    socket.emit("discussion:proceed-to-vote", {}, (response) => {
+      if (!response?.success) {
+        setErrorMessage(response?.error || "Could not begin voting");
+      }
+    });
+  }, []);
+
+  // Proceed from voting straight to resolution (Host)
+  const handleProceedToResolution = useCallback(() => {
+    const socket = getSocket();
+    if (!socket.connected) return;
+
+    socket.emit("vote:proceed-to-resolution", {}, (response) => {
+      if (!response?.success) {
+        setErrorMessage(response?.error || "Could not conclude voting");
+      }
+    });
+  }, []);
+
+  // Submit Vote Action
+  const handleSubmitVote = useCallback((targetId) => {
+    const socket = getSocket();
+    if (!socket.connected) return;
+
+    socket.emit(SOCKET_EVENTS.VOTE_SUBMIT, { targetId }, (response) => {
+      if (!response?.success) {
+        setErrorMessage(response?.error || "Vote rejected by server");
+      }
+    });
+  }, []);
+
+  const handleDismissVotingResult = useCallback(() => {
+    setLatestVotingResult(null);
+  }, []);
+
+  // Submit Night Action
+  const handleSubmitNightAction = useCallback((actionType, targetId) => {
+    const socket = getSocket();
+    if (!socket.connected) return;
+
+    socket.emit(SOCKET_EVENTS.NIGHT_ACTION, { actionType, targetId }, (response) => {
+      if (response?.success) {
+        setSubmittedNightTargetId(targetId);
+      } else {
+        setErrorMessage(response?.error || "Night action rejected by server");
+      }
+    });
+  }, []);
+
+  // Host hastens dawn
+  const handleProceedToDawn = useCallback(() => {
+    const socket = getSocket();
+    if (!socket.connected) return;
+
+    socket.emit("night:proceed-to-dawn", {}, (response) => {
+      if (!response?.success) {
+        setErrorMessage(response?.error || "Could not hasten the dawn");
+      }
+    });
+  }, []);
+
+  const handleDismissSeerResult = useCallback(() => {
+    setSeerInvestigationResult(null);
+  }, []);
+
+  const handleDismissElimination = useCallback(() => {
+    setLatestElimination(null);
+  }, []);
+
   // Determine current active view
-  const isRoleRevealPhase =
-    currentRoom?.status === PHASES.ROLE_REVEAL ||
-    gameState?.phase === PHASES.ROLE_REVEAL;
+  const isLobbyView = currentRoom && currentRoom.status === PHASES.LOBBY && !gameState;
+  const isRoleRevealPhase = gameState?.phase === PHASES.ROLE_REVEAL;
+  const isActiveGamePhase =
+    gameState &&
+    gameState.phase !== PHASES.LOBBY &&
+    gameState.phase !== PHASES.ROLE_REVEAL;
 
   return (
     <div className="app-shell">
@@ -289,7 +440,7 @@ function App() {
           />
         )}
 
-        {currentRoom && !isRoleRevealPhase && currentRoom.status === PHASES.LOBBY && (
+        {isLobbyView && (
           <LobbyScreen
             room={currentRoom}
             currentPlayer={currentPlayer}
@@ -301,13 +452,37 @@ function App() {
           />
         )}
 
-        {currentRoom && isRoleRevealPhase && (
+        {isRoleRevealPhase && (
           <RoleRevealScreen
             roleInfo={privateRole}
             playerName={currentPlayer?.displayName || "Villager"}
             gameState={gameState}
             isReady={isRoleAcknowledged}
             onAcknowledge={handleAcknowledgeRole}
+          />
+        )}
+
+        {isActiveGamePhase && (
+          <ActiveGameView
+            gameState={gameState}
+            currentPlayer={currentPlayer}
+            privateRole={privateRole}
+            isHost={currentPlayer?.isHost}
+            chatMessages={chatMessages}
+            onSendMessage={handleSendMessage}
+            onProceedToVote={handleProceedToVote}
+            onProceedToResolution={handleProceedToResolution}
+            onSubmitVote={handleSubmitVote}
+            votingState={votingState}
+            latestVotingResult={latestVotingResult}
+            onDismissVotingResult={handleDismissVotingResult}
+            onSubmitNightAction={handleSubmitNightAction}
+            submittedNightTargetId={submittedNightTargetId}
+            onProceedToDawn={handleProceedToDawn}
+            seerInvestigationResult={seerInvestigationResult}
+            onDismissSeerResult={handleDismissSeerResult}
+            latestElimination={latestElimination}
+            onDismissElimination={handleDismissElimination}
           />
         )}
       </main>
