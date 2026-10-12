@@ -3,6 +3,7 @@ import { connectSocket, disconnectSocket, getSocket } from "./services/socket.js
 import { SOCKET_EVENTS, PHASES } from "./constants/index.js";
 import { LandingScreen } from "./features/landing/LandingScreen.jsx";
 import { LobbyScreen } from "./features/lobby/LobbyScreen.jsx";
+import { RoleRevealScreen } from "./features/role-reveal/RoleRevealScreen.jsx";
 import "./App.css";
 
 const SESSION_STORAGE_KEY = "werewolf_player_session";
@@ -15,6 +16,11 @@ function App() {
   const [sessionToken, setSessionToken] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+
+  // Game state & private role
+  const [gameState, setGameState] = useState(null);
+  const [privateRole, setPrivateRole] = useState(null);
+  const [isRoleAcknowledged, setIsRoleAcknowledged] = useState(false);
 
   // Resume stored session on mount if available
   useEffect(() => {
@@ -38,6 +44,12 @@ function App() {
                   setCurrentRoom(res.room);
                   setCurrentPlayer(res.player);
                   setSessionToken(token);
+                  if (res.game) {
+                    setGameState(res.game);
+                  }
+                  if (res.privateRole) {
+                    setPrivateRole(res.privateRole);
+                  }
                 } else {
                   sessionStorage.removeItem(SESSION_STORAGE_KEY);
                 }
@@ -73,11 +85,27 @@ function App() {
       setIsLoading(false);
     };
 
+    const handleGameStarted = (publicGameState) => {
+      setGameState(publicGameState);
+      setIsRoleAcknowledged(false);
+    };
+
+    const handleGameYourRole = (rolePayload) => {
+      setPrivateRole(rolePayload);
+    };
+
+    const handleGamePhase = (updatedGameState) => {
+      setGameState(updatedGameState);
+    };
+
     socket.on("connect", handleConnect);
     socket.on("disconnect", handleDisconnect);
     socket.on("connect_error", handleConnectError);
     socket.on(SOCKET_EVENTS.ROOM_STATE, handleRoomState);
     socket.on(SOCKET_EVENTS.ROOM_ERROR, handleRoomError);
+    socket.on(SOCKET_EVENTS.GAME_STARTED, handleGameStarted);
+    socket.on(SOCKET_EVENTS.GAME_YOUR_ROLE, handleGameYourRole);
+    socket.on(SOCKET_EVENTS.GAME_PHASE, handleGamePhase);
 
     if (socket.connected) {
       handleConnect();
@@ -89,6 +117,9 @@ function App() {
       socket.off("connect_error", handleConnectError);
       socket.off(SOCKET_EVENTS.ROOM_STATE, handleRoomState);
       socket.off(SOCKET_EVENTS.ROOM_ERROR, handleRoomError);
+      socket.off(SOCKET_EVENTS.GAME_STARTED, handleGameStarted);
+      socket.off(SOCKET_EVENTS.GAME_YOUR_ROLE, handleGameYourRole);
+      socket.off(SOCKET_EVENTS.GAME_PHASE, handleGamePhase);
     };
   }, []);
 
@@ -109,6 +140,9 @@ function App() {
         setCurrentRoom(response.room);
         setCurrentPlayer(response.player);
         setSessionToken(response.sessionToken);
+        setGameState(null);
+        setPrivateRole(null);
+        setIsRoleAcknowledged(false);
         sessionStorage.setItem(
           SESSION_STORAGE_KEY,
           JSON.stringify({ token: response.sessionToken, code: response.room.roomCode })
@@ -136,6 +170,9 @@ function App() {
         setCurrentRoom(response.room);
         setCurrentPlayer(response.player);
         setSessionToken(response.sessionToken);
+        setGameState(null);
+        setPrivateRole(null);
+        setIsRoleAcknowledged(false);
         sessionStorage.setItem(
           SESSION_STORAGE_KEY,
           JSON.stringify({ token: response.sessionToken, code: response.room.roomCode })
@@ -160,6 +197,20 @@ function App() {
     });
   }, []);
 
+  // Add Test Villagers Action (Dev Helper)
+  const handleAddTestPlayers = useCallback(() => {
+    const socket = getSocket();
+    if (!socket.connected) return;
+
+    socket.emit("room:add-test-players", {}, (response) => {
+      if (response?.success) {
+        setCurrentRoom(response.room);
+      } else {
+        setErrorMessage(response?.error || "Could not summon test villagers");
+      }
+    });
+  }, []);
+
   // Leave Room Action
   const handleLeaveRoom = useCallback(() => {
     const socket = getSocket();
@@ -170,19 +221,49 @@ function App() {
     setCurrentRoom(null);
     setCurrentPlayer(null);
     setSessionToken(null);
+    setGameState(null);
+    setPrivateRole(null);
+    setIsRoleAcknowledged(false);
     setErrorMessage("");
   }, []);
 
-  // Start Game Placeholder (Milestone 3)
+  // Start Game Action (Host)
   const handleStartGame = useCallback(() => {
     const socket = getSocket();
     if (!socket.connected) return;
+
+    setIsLoading(true);
+    setErrorMessage("");
+
     socket.emit(SOCKET_EVENTS.GAME_START, {}, (response) => {
-      if (!response?.success) {
+      setIsLoading(false);
+      if (response?.success) {
+        setGameState(response.game);
+      } else {
         setErrorMessage(response?.error || "Game start criteria not met");
       }
     });
   }, []);
+
+  // Acknowledge Role Action
+  const handleAcknowledgeRole = useCallback(() => {
+    const socket = getSocket();
+    if (!socket.connected) return;
+
+    socket.emit("reveal:ready", {}, (response) => {
+      if (response?.success) {
+        setIsRoleAcknowledged(true);
+        if (response.game) {
+          setGameState(response.game);
+        }
+      }
+    });
+  }, []);
+
+  // Determine current active view
+  const isRoleRevealPhase =
+    currentRoom?.status === PHASES.ROLE_REVEAL ||
+    gameState?.phase === PHASES.ROLE_REVEAL;
 
   return (
     <div className="app-shell">
@@ -208,14 +289,25 @@ function App() {
           />
         )}
 
-        {currentRoom && currentRoom.status === PHASES.LOBBY && (
+        {currentRoom && !isRoleRevealPhase && currentRoom.status === PHASES.LOBBY && (
           <LobbyScreen
             room={currentRoom}
             currentPlayer={currentPlayer}
             onConfigureRoom={handleConfigureRoom}
             onStartGame={handleStartGame}
             onLeaveRoom={handleLeaveRoom}
+            onAddTestPlayers={handleAddTestPlayers}
             isStarting={isLoading}
+          />
+        )}
+
+        {currentRoom && isRoleRevealPhase && (
+          <RoleRevealScreen
+            roleInfo={privateRole}
+            playerName={currentPlayer?.displayName || "Villager"}
+            gameState={gameState}
+            isReady={isRoleAcknowledged}
+            onAcknowledge={handleAcknowledgeRole}
           />
         )}
       </main>

@@ -245,6 +245,53 @@ class RoomService {
     return null;
   }
 
+  addTestPlayers(roomCode, targetCount = null) {
+    const cleanCode = roomCode.toUpperCase().trim();
+    const room = this.roomsByCode.get(cleanCode);
+    if (!room) throw new Error("Room not found");
+    if (room.status !== PHASES.LOBBY) throw new Error("Can only add test players in lobby");
+
+    const validation = this.validateStartConditions(room);
+    const needed = targetCount || validation.minPlayersRequired;
+    const testNames = [
+      "Lord Gabriel",
+      "Brother Thomas",
+      "Sister Agnes",
+      "Miller John",
+      "Blacksmith Karl",
+      "Innkeeper Marta",
+      "Alchemist Silas",
+      "Baroness Elspeth",
+      "Huntsman Viktor",
+    ];
+
+    while (room.players.length < needed) {
+      const idx = room.players.length;
+      const baseName = testNames[(idx - 1) % testNames.length] || `Villager ${idx + 1}`;
+      const name = room.players.some((p) => p.displayName === baseName)
+        ? `${baseName} ${idx + 1}`
+        : baseName;
+
+      const playerId = crypto.randomUUID();
+      const sessionToken = generateSessionToken();
+
+      const botPlayer = {
+        id: playerId,
+        displayName: name,
+        socketId: null,
+        sessionToken,
+        isHost: false,
+        isConnected: true,
+        joinedAt: Date.now(),
+      };
+
+      room.players.push(botPlayer);
+      this.sessions.set(sessionToken, { roomCode: cleanCode, playerId });
+    }
+
+    return this.getPublicRoomState(cleanCode);
+  }
+
   validateStartConditions(room) {
     const errors = [];
     const totalPlayers = room.players.length;

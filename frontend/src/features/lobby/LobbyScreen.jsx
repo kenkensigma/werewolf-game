@@ -7,6 +7,7 @@ export function LobbyScreen({
   onConfigureRoom,
   onStartGame,
   onLeaveRoom,
+  onAddTestPlayers,
   isStarting,
 }) {
   const [copied, setCopied] = useState(false);
@@ -279,14 +280,26 @@ export function LobbyScreen({
 
             {/* Start Button (Host only) */}
             {isHost ? (
-              <button
-                type="button"
-                className="btn-primary start-game-btn"
-                disabled={!validation.valid || isStarting}
-                onClick={onStartGame}
-              >
-                {isStarting ? "Distributing Secret Roles..." : "Begin Game"}
-              </button>
+              <>
+                {!validation.valid && onAddTestPlayers && (
+                  <button
+                    type="button"
+                    className="btn-secondary"
+                    style={{ width: "100%", marginTop: "12px", borderStyle: "dashed" }}
+                    onClick={onAddTestPlayers}
+                  >
+                    Summon Test Villagers (Dev Helper)
+                  </button>
+                )}
+                <button
+                  type="button"
+                  className="btn-primary start-game-btn"
+                  disabled={!validation.valid || isStarting}
+                  onClick={onStartGame}
+                >
+                  {isStarting ? "Distributing Secret Roles..." : "Begin Game"}
+                </button>
+              </>
             ) : (
               <p className="config-desc" style={{ textAlign: "center", marginTop: 12 }}>
                 Waiting for the host to begin the match.

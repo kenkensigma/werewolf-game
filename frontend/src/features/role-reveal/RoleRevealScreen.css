@@ -1,0 +1,234 @@
+/* Role Reveal Screen: Gothic Cinematic Atmosphere */
+.role-reveal-container {
+  width: 100%;
+  max-width: 680px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 16px 20px;
+  animation: fadeInAtmosphere var(--motion-atmosphere) var(--ease-enter);
+}
+
+@keyframes fadeInAtmosphere {
+  from {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.reveal-header {
+  margin-bottom: 24px;
+}
+
+.reveal-badge {
+  font-size: var(--text-xs);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--color-gold);
+  border: 1px solid var(--color-border-gold);
+  background-color: var(--color-gold-surface);
+  border-radius: var(--radius-sm);
+  padding: 4px 14px;
+  display: inline-block;
+  margin-bottom: 8px;
+}
+
+.reveal-title {
+  font-family: var(--font-display);
+  font-size: var(--text-2xl);
+  font-weight: 700;
+  color: var(--color-ivory);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin: 0 0 6px 0;
+}
+
+.reveal-subtitle {
+  font-family: var(--font-editorial);
+  font-size: var(--text-base);
+  color: var(--color-muted);
+  margin: 0;
+}
+
+/* 3D Card Stage per design.md */
+.card-stage {
+  perspective: 1200px;
+  width: var(--card-width-desktop);
+  height: var(--card-height-desktop);
+  margin: 0 auto 24px auto;
+}
+
+@media (max-width: 600px) {
+  .card-stage {
+    width: var(--card-width-mobile);
+    height: var(--card-height-mobile);
+  }
+}
+
+.reveal-card-inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  text-align: center;
+  transition: transform var(--motion-card) var(--ease-standard);
+  transform-style: preserve-3d;
+  cursor: pointer;
+  outline: none;
+}
+
+.reveal-card-inner:focus-visible {
+  outline: 2px solid var(--color-gold);
+  outline-offset: 4px;
+  border-radius: var(--radius-card);
+}
+
+.reveal-card-inner.is-flipped {
+  transform: rotateY(180deg);
+}
+
+/* Card Faces */
+.reveal-card-face {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+/* Back Face: Occult Sigil & Gold Border */
+.card-face-back {
+  background: radial-gradient(circle at 50% 50%, #22242C 0%, #0E0F12 100%);
+  border: 2px solid var(--color-gold);
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.back-ornament-frame {
+  border: 1px solid var(--color-border-gold);
+  width: 100%;
+  height: 100%;
+  border-radius: 4px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(circle at 50% 50%, rgba(198, 166, 107, 0.08) 0%, transparent 80%);
+  gap: 16px;
+}
+
+.back-sigil {
+  width: 72px;
+  height: 72px;
+  color: var(--color-gold);
+}
+
+.back-prompt-text {
+  font-family: var(--font-display);
+  font-size: var(--text-xs);
+  letter-spacing: 0.25em;
+  color: var(--color-gold);
+  text-transform: uppercase;
+}
+
+.back-click-cue {
+  font-size: var(--text-xs);
+  color: var(--color-muted);
+  letter-spacing: 0.05em;
+}
+
+/* Front Face: Secret Role Revealed */
+.card-face-front {
+  background-color: var(--color-surface-raised);
+  transform: rotateY(180deg);
+  padding: 24px 20px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.card-faction-badge {
+  font-family: var(--font-sans);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  margin-bottom: 12px;
+}
+
+.card-art-box {
+  width: 100%;
+  height: 180px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto;
+}
+
+.card-role-title {
+  font-family: var(--font-display);
+  font-size: var(--text-xl);
+  color: var(--color-ivory);
+  letter-spacing: 0.05em;
+  margin: 14px 0 6px 0;
+  text-transform: uppercase;
+}
+
+.card-role-instruction {
+  font-family: var(--font-editorial);
+  font-size: var(--text-sm);
+  color: var(--color-parchment);
+  line-height: 1.45;
+  margin: 0;
+}
+
+/* Actions and Readiness */
+.reveal-controls {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+}
+
+.btn-confirm-duty {
+  height: 48px;
+  padding: 0 32px;
+  font-family: var(--font-display);
+  font-size: var(--text-sm);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* Ready Roster Summary */
+.ready-status-box {
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: 12px 20px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: var(--text-xs);
+  color: var(--color-muted);
+}
+
+.ready-pill {
+  font-weight: 600;
+  color: var(--color-gold);
+}
