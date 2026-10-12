@@ -486,7 +486,43 @@ function registerRoomHandlers(io, socket) {
     }
   });
 
-  // 12. Socket Disconnect
+  // 14. Game Rematch (Host initiates return to lobby)
+  socket.on(SOCKET_EVENTS.GAME_REMATCH, (payload, callback) => {
+    try {
+      const sessionToken = roomService.socketToSession.get(socket.id);
+      if (!sessionToken) throw new Error("No active session found");
+
+      const session = roomService.sessions.get(sessionToken);
+      if (!session) throw new Error("Session expired");
+
+      const room = roomService.getRoomByCode(session.roomCode);
+      if (!room) throw new Error("Room not found");
+
+      if (room.hostId !== session.playerId) {
+        throw new Error("Only the chamber host may initiate a rematch");
+      }
+
+      gameStateService.resetGameForRematch(session.roomCode);
+      room.status = PHASES.LOBBY;
+      gameTimerService.cancelTimer(session.roomCode);
+
+      const publicRoom = roomService.getPublicRoomState(session.roomCode);
+      io.to(session.roomCode).emit(SOCKET_EVENTS.ROOM_STATE, publicRoom);
+      io.to(session.roomCode).emit(SOCKET_EVENTS.GAME_REMATCH, { room: publicRoom });
+
+      if (typeof callback === "function") {
+        callback({ success: true, room: publicRoom });
+      }
+    } catch (err) {
+      if (typeof callback === "function") {
+        callback({ success: false, error: err.message });
+      } else {
+        socket.emit(SOCKET_EVENTS.ROOM_ERROR, { message: err.message });
+      }
+    }
+  });
+
+  // 15. Socket Disconnect
   socket.on("disconnect", () => {
     const result = roomService.handleDisconnect(socket.id);
     if (result && result.room) {
@@ -561,12 +597,17 @@ function resolveVotingAndAdvance(io, game) {
     const publicState = gameStateService.transitionPhase(game.id, PHASES.GAME_OVER, null);
     publicState.winner = "TROUBLEMAKER";
     publicState.winReason = resolution.reason;
-    publicState.revealedRoles = Array.from(game.roleAssignments.entries()).map(([id, info]) => ({
-      playerId: id,
-      displayName: game.players.find((p) => p.id === id)?.displayName || "Unknown",
-      role: info.role,
-      faction: info.faction,
-    }));
+    publicState.revealedRoles = Array.from(game.roleAssignments.entries()).map(([id, info]) => {
+      const p = game.players.find((player) => player.id === id);
+      return {
+        playerId: id,
+        displayName: p?.displayName || "Unknown",
+        role: info.role,
+        faction: info.faction,
+        status: p?.status || PLAYER_STATUS.ALIVE,
+        eliminatedAtPhase: p?.eliminatedAtPhase || null,
+      };
+    });
     io.to(game.roomCode).emit(SOCKET_EVENTS.GAME_OVER, publicState);
     io.to(game.roomCode).emit(SOCKET_EVENTS.GAME_PHASE, publicState);
     return;
@@ -578,12 +619,17 @@ function resolveVotingAndAdvance(io, game) {
     const publicState = gameStateService.transitionPhase(game.id, PHASES.GAME_OVER, null);
     publicState.winner = victory.winner;
     publicState.winReason = victory.reason;
-    publicState.revealedRoles = Array.from(game.roleAssignments.entries()).map(([id, info]) => ({
-      playerId: id,
-      displayName: game.players.find((p) => p.id === id)?.displayName || "Unknown",
-      role: info.role,
-      faction: info.faction,
-    }));
+    publicState.revealedRoles = Array.from(game.roleAssignments.entries()).map(([id, info]) => {
+      const p = game.players.find((player) => player.id === id);
+      return {
+        playerId: id,
+        displayName: p?.displayName || "Unknown",
+        role: info.role,
+        faction: info.faction,
+        status: p?.status || PLAYER_STATUS.ALIVE,
+        eliminatedAtPhase: p?.eliminatedAtPhase || null,
+      };
+    });
     io.to(game.roomCode).emit(SOCKET_EVENTS.GAME_OVER, publicState);
     io.to(game.roomCode).emit(SOCKET_EVENTS.GAME_PHASE, publicState);
     return;
@@ -640,12 +686,17 @@ function resolveNightAndAdvance(io, game) {
     const publicState = gameStateService.transitionPhase(game.id, PHASES.GAME_OVER, null);
     publicState.winner = resolution.victory.winner;
     publicState.winReason = resolution.victory.reason;
-    publicState.revealedRoles = Array.from(game.roleAssignments.entries()).map(([id, info]) => ({
-      playerId: id,
-      displayName: game.players.find((p) => p.id === id)?.displayName || "Unknown",
-      role: info.role,
-      faction: info.faction,
-    }));
+    publicState.revealedRoles = Array.from(game.roleAssignments.entries()).map(([id, info]) => {
+      const p = game.players.find((player) => player.id === id);
+      return {
+        playerId: id,
+        displayName: p?.displayName || "Unknown",
+        role: info.role,
+        faction: info.faction,
+        status: p?.status || PLAYER_STATUS.ALIVE,
+        eliminatedAtPhase: p?.eliminatedAtPhase || null,
+      };
+    });
     io.to(game.roomCode).emit(SOCKET_EVENTS.GAME_OVER, publicState);
     io.to(game.roomCode).emit(SOCKET_EVENTS.GAME_PHASE, publicState);
     return;

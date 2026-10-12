@@ -241,6 +241,15 @@ class GameStateService {
   getGameById(gameId) {
     return this.gamesById.get(gameId);
   }
+
+  resetGameForRematch(roomCode) {
+    const cleanRoomCode = roomCode.toUpperCase().trim();
+    const gameId = this.gameByRoomCode.get(cleanRoomCode);
+    if (gameId) {
+      this.gamesById.delete(gameId);
+      this.gameByRoomCode.delete(cleanRoomCode);
+    }
+  }
 }
 
 const gameStateService = new GameStateService();

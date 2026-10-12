@@ -1,0 +1,360 @@
+.game-over-container {
+  width: 100%;
+  max-width: 900px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  padding: 2.5rem 2rem;
+  background: var(--color-surface);
+  border: 1px solid var(--color-gold-border);
+  border-radius: var(--radius-md);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.7);
+  animation: fadeIn 350ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.game-over-container.winner-werewolf {
+  border-color: rgba(141, 52, 59, 0.6);
+  box-shadow: 0 16px 48px rgba(141, 52, 59, 0.2);
+}
+
+.game-over-container.winner-village {
+  border-color: rgba(120, 137, 166, 0.6);
+  box-shadow: 0 16px 48px rgba(120, 137, 166, 0.2);
+}
+
+.game-over-container.winner-troublemaker {
+  border-color: rgba(198, 166, 107, 0.6);
+  box-shadow: 0 16px 48px rgba(198, 166, 107, 0.25);
+}
+
+/* Header */
+.game-over-header {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.victory-emblem-frame {
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  filter: drop-shadow(0 0 16px rgba(198, 166, 107, 0.3));
+}
+
+.winner-village .victory-emblem-frame {
+  color: var(--color-moonlight);
+  filter: drop-shadow(0 0 16px rgba(120, 137, 166, 0.4));
+}
+
+.winner-werewolf .victory-emblem-frame {
+  color: var(--color-burgundy-light);
+  filter: drop-shadow(0 0 16px rgba(178, 66, 75, 0.5));
+}
+
+.winner-troublemaker .victory-emblem-frame {
+  color: var(--color-gold);
+  filter: drop-shadow(0 0 16px rgba(198, 166, 107, 0.5));
+}
+
+.victory-eyebrow {
+  font-size: 0.85rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--color-parchment-dim);
+  margin-bottom: 0.35rem;
+}
+
+.victory-title {
+  font-size: 2.25rem;
+  color: var(--color-gold);
+  margin: 0 0 0.75rem;
+  letter-spacing: 0.04em;
+}
+
+.winner-werewolf .victory-title {
+  color: #ff9da4;
+}
+
+.winner-village .victory-title {
+  color: #d1dcfa;
+}
+
+.winner-troublemaker .victory-title {
+  color: var(--color-gold);
+}
+
+.victory-reason {
+  font-size: 1.15rem;
+  color: var(--color-parchment);
+  max-width: 680px;
+  line-height: 1.5;
+  margin: 0;
+}
+
+/* Match Stats Bar */
+.match-stats-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  padding: 1rem 1.5rem;
+  background: var(--color-void);
+  border: 1px solid rgba(198, 166, 107, 0.15);
+  border-radius: var(--radius-sm);
+}
+
+.stat-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.stat-label {
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-parchment-dim);
+}
+
+.stat-value {
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: var(--color-ivory);
+}
+
+.stat-survivor {
+  color: #5ec986;
+}
+
+.stat-fallen {
+  color: #d6727a;
+}
+
+.stat-separator {
+  width: 1px;
+  height: 28px;
+  background: rgba(198, 166, 107, 0.15);
+}
+
+/* Roster Section */
+.roster-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.roster-header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.roster-title {
+  font-size: 1.25rem;
+  color: var(--color-gold);
+  margin: 0;
+  letter-spacing: 0.04em;
+}
+
+.roster-subtitle {
+  font-size: 0.95rem;
+  color: var(--color-parchment-dim);
+}
+
+.roster-table-wrapper {
+  overflow-x: auto;
+  border: 1px solid rgba(198, 166, 107, 0.18);
+  border-radius: var(--radius-sm);
+  background: rgba(16, 17, 20, 0.6);
+}
+
+.roster-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.roster-table th {
+  padding: 0.75rem 1rem;
+  background: rgba(25, 26, 31, 0.85);
+  font-family: var(--font-display);
+  font-size: 0.8rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-gold);
+  border-bottom: 1px solid rgba(198, 166, 107, 0.2);
+}
+
+.roster-row {
+  border-bottom: 1px solid rgba(198, 166, 107, 0.08);
+  transition: background var(--motion-fast) var(--ease-standard);
+}
+
+.roster-row:hover {
+  background: rgba(198, 166, 107, 0.04);
+}
+
+.roster-row.is-self {
+  background: rgba(198, 166, 107, 0.07);
+}
+
+.roster-row.is-slain {
+  opacity: 0.8;
+}
+
+.roster-table td {
+  padding: 0.85rem 1rem;
+  vertical-align: middle;
+}
+
+.player-name-cell {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.player-display-name {
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: var(--color-ivory);
+}
+
+.self-tag {
+  font-size: 0.75rem;
+  color: var(--color-gold);
+  font-style: italic;
+}
+
+/* Role Badges */
+.role-badge {
+  display: inline-block;
+  padding: 0.25rem 0.65rem;
+  font-size: 0.8rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+}
+
+.role-werewolf {
+  background: rgba(141, 52, 59, 0.35);
+  color: #ff9da4;
+  border-color: rgba(141, 52, 59, 0.6);
+}
+
+.role-seer {
+  background: rgba(120, 137, 166, 0.3);
+  color: #d1dcfa;
+  border-color: rgba(120, 137, 166, 0.6);
+}
+
+.role-guard {
+  background: rgba(198, 166, 107, 0.25);
+  color: #f7e3b5;
+  border-color: rgba(198, 166, 107, 0.5);
+}
+
+.role-hunter {
+  background: rgba(178, 66, 75, 0.3);
+  color: #ffc2c7;
+  border-color: rgba(178, 66, 75, 0.5);
+}
+
+.role-troublemaker {
+  background: rgba(212, 175, 55, 0.25);
+  color: #ffe685;
+  border-color: rgba(212, 175, 55, 0.5);
+}
+
+.role-villager {
+  background: rgba(120, 120, 130, 0.2);
+  color: var(--color-parchment);
+  border-color: rgba(120, 120, 130, 0.4);
+}
+
+/* Faction Tags */
+.faction-tag {
+  font-size: 0.825rem;
+  color: var(--color-parchment-dim);
+}
+
+.faction-werewolf {
+  color: #d6727a;
+}
+
+.faction-village {
+  color: var(--color-moonlight);
+}
+
+.faction-independent {
+  color: var(--color-gold);
+}
+
+/* Fate Badges */
+.fate-badge {
+  display: inline-block;
+  font-size: 0.9rem;
+}
+
+.fate-survived {
+  color: #5ec986;
+  font-weight: 500;
+}
+
+.fate-night {
+  color: var(--color-moonlight);
+  font-style: italic;
+}
+
+.fate-tribunal {
+  color: #d6727a;
+  font-style: italic;
+}
+
+/* Action Controls */
+.game-over-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+}
+
+.rematch-btn {
+  width: 100%;
+  min-height: 48px;
+  font-size: 1rem;
+}
+
+.leave-btn {
+  width: 100%;
+  min-height: 46px;
+}
+
+.rematch-waiting-note {
+  text-align: center;
+  font-size: 0.95rem;
+  color: var(--color-parchment-dim);
+  padding: 0.5rem 0;
+}
+
+@media (max-width: 640px) {
+  .game-over-container {
+    padding: 1.5rem 1rem;
+  }
+
+  .victory-title {
+    font-size: 1.75rem;
+  }
+
+  .match-stats-bar {
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+
+  .stat-separator {
+    display: none;
+  }
+}
