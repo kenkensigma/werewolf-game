@@ -138,6 +138,36 @@ function registerRoomHandlers(io, socket) {
     }
   });
 
+  // 4b. Kick Player (Host only, lobby only)
+  socket.on(SOCKET_EVENTS.ROOM_KICK, ({ targetPlayerId }, callback) => {
+    try {
+      const result = roomService.kickPlayer(socket.id, targetPlayerId);
+
+      // 1. Notify the kicked player directly — they'll redirect to landing
+      if (result.kickedSocketId) {
+        io.to(result.kickedSocketId).emit(SOCKET_EVENTS.PLAYER_KICKED, {
+          reason: "You have been removed from the chamber by the host.",
+        });
+        // Force them out of the socket room
+        const kickedSocket = io.sockets.sockets.get(result.kickedSocketId);
+        if (kickedSocket) {
+          kickedSocket.leave(result.roomCode);
+        }
+      }
+
+      // 2. Broadcast updated room state to remaining players
+      io.to(result.roomCode).emit(SOCKET_EVENTS.ROOM_STATE, result.room);
+
+      if (typeof callback === "function") {
+        callback({ success: true });
+      }
+    } catch (err) {
+      if (typeof callback === "function") {
+        callback({ success: false, error: err.message });
+      }
+    }
+  });
+
   // 5. Resume Session
   socket.on(SOCKET_EVENTS.SESSION_RESUME, ({ sessionToken, roomCode }, callback) => {
     try {

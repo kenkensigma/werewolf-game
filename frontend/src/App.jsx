@@ -6,6 +6,8 @@ import { LobbyScreen } from "./features/lobby/LobbyScreen.jsx";
 import { RoleRevealScreen } from "./features/role-reveal/RoleRevealScreen.jsx";
 import { ActiveGameView } from "./features/gameplay/ActiveGameView.jsx";
 import { GameOverScreen } from "./features/gameplay/GameOverScreen.jsx";
+import { AudioControlsWidget } from "./features/audio/AudioControlsWidget.jsx";
+import { audioService, SFX_TYPES, BGM_TRACKS } from "./services/audioService.js";
 import "./App.css";
 
 const SESSION_STORAGE_KEY = "werewolf_player_session";
@@ -109,6 +111,8 @@ function App() {
       setSeerInvestigationResult(null);
       setLatestElimination(null);
       setWitchPotions({ healUsed: false, poisonUsed: false });
+      audioService.playSfx(SFX_TYPES.GAME_START);
+      audioService.playBgmForPhase(publicGameState.phase);
     };
 
     const handleGameYourRole = (rolePayload) => {
@@ -120,9 +124,16 @@ function App() {
       if (updatedGameState.phase === PHASES.NIGHT) {
         setSubmittedNightTargetId(null);
         setLatestVotingResult(null);
+        audioService.playSfx(SFX_TYPES.WOLF_HOWL);
+      } else if (updatedGameState.phase === PHASES.NIGHT_1) {
+        audioService.playSfx(SFX_TYPES.WOLF_HOWL);
       } else if (updatedGameState.phase === PHASES.DAY_DISCUSSION) {
         setLatestVotingResult(null);
+        audioService.playSfx(SFX_TYPES.MORNING_DAWN);
+      } else if (updatedGameState.phase === PHASES.DAY_VOTING) {
+        audioService.playSfx(SFX_TYPES.GAVEL_STRIKE);
       }
+      audioService.playBgmForPhase(updatedGameState.phase);
     };
 
     const handleDiscussionMessage = (message) => {
@@ -135,18 +146,23 @@ function App() {
 
     const handleVotingResult = (result) => {
       setLatestVotingResult(result);
+      audioService.playSfx(SFX_TYPES.GAVEL_STRIKE);
     };
 
     const handleNightSeerResult = (result) => {
       setSeerInvestigationResult(result);
+      audioService.playSfx(SFX_TYPES.ROLE_REVEAL);
     };
 
     const handleGameElimination = (elimination) => {
       setLatestElimination(elimination);
+      audioService.playSfx(SFX_TYPES.DEATH_BELL);
     };
 
     const handleGameOver = (finalState) => {
       setGameState(finalState);
+      audioService.playSfx(SFX_TYPES.DEATH_BELL);
+      audioService.playBgm(BGM_TRACKS.GAME_OVER);
     };
 
     const handleGameRematch = ({ room }) => {
@@ -160,9 +176,31 @@ function App() {
       setSeerInvestigationResult(null);
       setLatestElimination(null);
       setWitchPotions({ healUsed: false, poisonUsed: false });
+      audioService.playBgm(BGM_TRACKS.LOBBY);
       if (room) {
         setCurrentRoom(room);
       }
+    };
+
+    const handlePlayerKicked = ({ reason }) => {
+      // Clear all state and return to landing screen
+      setCurrentRoom(null);
+      setCurrentPlayer(null);
+      setSessionToken(null);
+      setGameState(null);
+      setPrivateRole(null);
+      setIsRoleAcknowledged(false);
+      setChatMessages([]);
+      setVotingState(null);
+      setLatestVotingResult(null);
+      setSubmittedNightTargetId(null);
+      setSeerInvestigationResult(null);
+      setLatestElimination(null);
+      setWitchPotions({ healUsed: false, poisonUsed: false });
+      sessionStorage.removeItem(SESSION_STORAGE_KEY);
+      setErrorMessage(reason || "You have been removed from the chamber.");
+      audioService.playSfx(SFX_TYPES.DEATH_BELL);
+      audioService.playBgm(BGM_TRACKS.LOBBY);
     };
 
     socket.on("connect", handleConnect);
@@ -180,6 +218,7 @@ function App() {
     socket.on(SOCKET_EVENTS.GAME_ELIMINATION, handleGameElimination);
     socket.on(SOCKET_EVENTS.GAME_OVER, handleGameOver);
     socket.on(SOCKET_EVENTS.GAME_REMATCH, handleGameRematch);
+    socket.on(SOCKET_EVENTS.PLAYER_KICKED, handlePlayerKicked);
 
     if (socket.connected) {
       handleConnect();
@@ -201,6 +240,7 @@ function App() {
       socket.off(SOCKET_EVENTS.GAME_ELIMINATION, handleGameElimination);
       socket.off(SOCKET_EVENTS.GAME_OVER, handleGameOver);
       socket.off(SOCKET_EVENTS.GAME_REMATCH, handleGameRematch);
+      socket.off(SOCKET_EVENTS.PLAYER_KICKED, handlePlayerKicked);
     };
   }, []);
 
@@ -225,6 +265,8 @@ function App() {
         setPrivateRole(null);
         setIsRoleAcknowledged(false);
         setChatMessages([]);
+        audioService.playSfx(SFX_TYPES.BUTTON_CLICK);
+        audioService.playBgm(BGM_TRACKS.LOBBY);
         sessionStorage.setItem(
           SESSION_STORAGE_KEY,
           JSON.stringify({ token: response.sessionToken, code: response.room.roomCode })
@@ -256,6 +298,8 @@ function App() {
         setPrivateRole(null);
         setIsRoleAcknowledged(false);
         setChatMessages([]);
+        audioService.playSfx(SFX_TYPES.BUTTON_CLICK);
+        audioService.playBgm(BGM_TRACKS.LOBBY);
         sessionStorage.setItem(
           SESSION_STORAGE_KEY,
           JSON.stringify({ token: response.sessionToken, code: response.room.roomCode })
@@ -311,6 +355,17 @@ function App() {
     setErrorMessage("");
   }, []);
 
+  // Kick Player Action (Host only)
+  const handleKickPlayer = useCallback((targetPlayerId) => {
+    const socket = getSocket();
+    if (!socket.connected) return;
+    socket.emit(SOCKET_EVENTS.ROOM_KICK, { targetPlayerId }, (response) => {
+      if (!response?.success) {
+        setErrorMessage(response?.error || "Failed to kick player");
+      }
+    });
+  }, []);
+
   // Start Game Action (Host)
   const handleStartGame = useCallback(() => {
     const socket = getSocket();
@@ -334,6 +389,7 @@ function App() {
     const socket = getSocket();
     if (!socket.connected) return;
 
+    audioService.playSfx(SFX_TYPES.BUTTON_CLICK);
     socket.emit("reveal:ready", {}, (response) => {
       if (response?.success) {
         setIsRoleAcknowledged(true);
@@ -385,6 +441,7 @@ function App() {
     const socket = getSocket();
     if (!socket.connected) return;
 
+    audioService.playSfx(SFX_TYPES.VOTE);
     socket.emit(SOCKET_EVENTS.VOTE_SUBMIT, { targetId }, (response) => {
       if (!response?.success) {
         setErrorMessage(response?.error || "Vote rejected by server");
@@ -400,6 +457,12 @@ function App() {
   const handleSubmitNightAction = useCallback((actionType, targetId) => {
     const socket = getSocket();
     if (!socket.connected) return;
+
+    if (actionType === ACTION_TYPES.WITCH_HEAL || actionType === ACTION_TYPES.WITCH_POISON) {
+      audioService.playSfx(SFX_TYPES.POTION);
+    } else {
+      audioService.playSfx(SFX_TYPES.ACTION_SUBMIT);
+    }
 
     socket.emit(SOCKET_EVENTS.NIGHT_ACTION, { actionType, targetId }, (response) => {
       if (response?.success) {
@@ -474,6 +537,9 @@ function App() {
 
   return (
     <div className="app-shell">
+      {/* Atmosphere & Volume Control Widget */}
+      <AudioControlsWidget />
+
       <header className="header">
         <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 12, marginBottom: 8 }}>
           <span className="title-badge">Multiplayer Engine</span>
@@ -504,6 +570,7 @@ function App() {
             onStartGame={handleStartGame}
             onLeaveRoom={handleLeaveRoom}
             onAddTestPlayers={handleAddTestPlayers}
+            onKickPlayer={handleKickPlayer}
             isStarting={isLoading}
           />
         )}

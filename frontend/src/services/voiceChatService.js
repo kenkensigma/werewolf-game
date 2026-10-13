@@ -1,11 +1,13 @@
 import { getSocket } from "./socket.js";
-import { SOCKET_EVENTS, PHASES, PLAYER_STATUS, ROLES } from "../constants/index.js";
+import { SOCKET_EVENTS, PHASES, PLAYER_STATUS } from "../constants/index.js";
 
 // WebRTC ICE Servers Configuration (Public STUN servers for peer discovery)
 const RTC_CONFIG = {
   iceServers: [
     { urls: "stun:stun.l.google.com:19302" },
     { urls: "stun:stun1.l.google.com:19302" },
+    { urls: "stun:stun2.l.google.com:19302" },
+    { urls: "stun:stun.cloudflare.com:3478" },
   ],
 };
 
@@ -16,10 +18,10 @@ class VoiceChatService {
     this.analyserNode = null;
     this.micSourceNode = null;
 
-    // socketId -> { peerConnection: RTCPeerConnection, remoteStream: MediaStream, gainNode: GainNode, pannerNode: StereoPannerNode, playerId: string }
+    // socketId -> { peerConnection, remoteStream, audioElement, gainNode, pannerNode, playerId, pendingCandidates }
     this.peers = new Map();
 
-    this.isMuted = true; // Start muted by default for user comfort
+    this.isMuted = false;
     this.isDeafened = false;
     this.isSpatialEnabled = true;
     this.isSpeaking = false;
@@ -28,8 +30,8 @@ class VoiceChatService {
 
     this.speakingListeners = new Set();
     this.stateListeners = new Set();
-    this.speakingUsers = new Set(); // Set of playerIds currently speaking
-    this.mutedUsers = new Set();    // Set of playerIds currently muted
+    this.speakingUsers = new Set();
+    this.mutedUsers = new Set();
 
     this.analyserInterval = null;
     this.isInitialized = false;
@@ -64,9 +66,32 @@ class VoiceChatService {
   }
 
   /**
+   * Try to resume the AudioContext (needs a user gesture on mobile).
+   */
+  async tryResumeAudioContext() {
+    if (!this.audioContext) return;
+    if (this.audioContext.state === "suspended") {
+      try {
+        await this.audioContext.resume();
+        console.log("[Voice] AudioContext resumed, state:", this.audioContext.state);
+      } catch (e) {
+        console.warn("[Voice] Could not resume AudioContext:", e);
+      }
+    }
+  }
+
+  /**
    * Initialize microphone capture and join voice signaling room.
+   * Idempotent: if already connected to the same room, returns true immediately.
    */
   async joinVoice(roomCode, playerId) {
+    // Already connected to this room - don't re-initialize
+    if (this.localStream && this.roomCode === roomCode) {
+      this.currentPlayerId = playerId;
+      this.notifyState();
+      return true;
+    }
+
     this.roomCode = roomCode;
     this.currentPlayerId = playerId;
 
@@ -82,25 +107,31 @@ class VoiceChatService {
       });
 
       this.localStream = stream;
-      // Start tracks in muted state
+      this.isMuted = false;
       this.localStream.getAudioTracks().forEach((track) => {
-        track.enabled = !this.isMuted;
+        track.enabled = true;
       });
 
       // 2. Setup WebAudio API AudioContext & AnalyserNode for volume detection
+      //    (Only used for VAD - Voice Activity Detection on local mic)
       const AudioCtx = window.AudioContext || window.webkitAudioContext;
       if (AudioCtx) {
-        this.audioContext = new AudioCtx();
-        if (this.audioContext.state === "suspended") {
-          await this.audioContext.resume();
+        try {
+          if (!this.audioContext || this.audioContext.state === "closed") {
+            this.audioContext = new AudioCtx();
+          }
+          // Try to resume, this may fail until user gesture on mobile
+          await this.tryResumeAudioContext();
+
+          this.micSourceNode = this.audioContext.createMediaStreamSource(stream);
+          this.analyserNode = this.audioContext.createAnalyser();
+          this.analyserNode.fftSize = 256;
+          this.micSourceNode.connect(this.analyserNode);
+
+          this.startVoiceActivityDetection();
+        } catch (e) {
+          console.warn("[Voice] AudioContext setup failed, VAD disabled:", e);
         }
-
-        this.micSourceNode = this.audioContext.createMediaStreamSource(stream);
-        this.analyserNode = this.audioContext.createAnalyser();
-        this.analyserNode.fftSize = 256;
-        this.micSourceNode.connect(this.analyserNode);
-
-        this.startVoiceActivityDetection();
       }
 
       // 3. Register Socket.IO signaling listeners
@@ -191,7 +222,9 @@ class VoiceChatService {
   }
 
   /**
-   * Create RTCPeerConnection for a remote peer with spatial audio nodes.
+   * Create RTCPeerConnection for a remote peer.
+   * Audio is played EXCLUSIVELY via HTMLAudioElement (most compatible).
+   * WebAudio is only used for spatial gain/pan on top via a gain/panner chain.
    */
   createPeerConnection(targetSocketId, targetPlayerId, isInitiator) {
     if (this.peers.has(targetSocketId)) {
@@ -218,37 +251,62 @@ class VoiceChatService {
       }
     };
 
-    let gainNode = null;
-    let pannerNode = null;
+    pc.onconnectionstatechange = () => {
+      console.log(`[Voice] Peer ${targetSocketId} connection state: ${pc.connectionState}`);
+    };
 
-    // When remote audio track arrives, connect through WebAudio pipeline
+    pc.oniceconnectionstatechange = () => {
+      console.log(`[Voice] Peer ${targetSocketId} ICE state: ${pc.iceConnectionState}`);
+    };
+
+    // When remote audio track arrives
     pc.ontrack = (event) => {
+      console.log("[Voice] ontrack fired for peer:", targetSocketId);
       const remoteStream = event.streams[0];
-      if (this.audioContext) {
-        try {
-          const source = this.audioContext.createMediaStreamSource(remoteStream);
-          gainNode = this.audioContext.createGain();
-
-          if (this.audioContext.createStereoPanner) {
-            pannerNode = this.audioContext.createStereoPanner();
-            source.connect(gainNode);
-            gainNode.connect(pannerNode);
-            pannerNode.connect(this.audioContext.destination);
-          } else {
-            source.connect(gainNode);
-            gainNode.connect(this.audioContext.destination);
-          }
-
-          const peerData = this.peers.get(targetSocketId);
-          if (peerData) {
-            peerData.gainNode = gainNode;
-            peerData.pannerNode = pannerNode;
-            peerData.remoteStream = remoteStream;
-          }
-        } catch (e) {
-          console.warn("Could not setup audio context pipeline for peer:", e);
-        }
+      if (!remoteStream) {
+        console.warn("[Voice] ontrack: no stream in event");
+        return;
       }
+
+      const peerData = this.peers.get(targetSocketId);
+      if (!peerData) return;
+
+      peerData.remoteStream = remoteStream;
+
+      // PRIMARY: Use HTMLAudioElement - most compatible across all browsers/mobile
+      let audio = peerData.audioElement;
+      if (!audio) {
+        audio = new Audio();
+        audio.autoplay = true;
+        audio.controls = false;
+        // playsInline needed for iOS
+        audio.setAttribute("playsinline", "");
+        audio.style.display = "none";
+        document.body.appendChild(audio);
+        peerData.audioElement = audio;
+      }
+
+      audio.srcObject = remoteStream;
+      audio.volume = 1.0;
+      audio.muted = false;
+
+      // Attempt to play (required on mobile after user gesture)
+      const playPromise = audio.play();
+      if (playPromise !== undefined) {
+        playPromise.catch((err) => {
+          console.warn("[Voice] Audio autoplay blocked:", err.name, err.message);
+          // On mobile, autoplay blocked - try to play on next user interaction
+          const retryPlay = () => {
+            audio.play().catch(() => {});
+            document.removeEventListener("click", retryPlay);
+            document.removeEventListener("touchstart", retryPlay);
+          };
+          document.addEventListener("click", retryPlay, { once: true });
+          document.addEventListener("touchstart", retryPlay, { once: true });
+        });
+      }
+
+      console.log("[Voice] Audio element setup for peer:", targetSocketId, "stream active:", remoteStream.active);
     };
 
     const peerRecord = {
@@ -257,6 +315,8 @@ class VoiceChatService {
       gainNode: null,
       pannerNode: null,
       remoteStream: null,
+      audioElement: null,
+      pendingCandidates: [],
     };
     this.peers.set(targetSocketId, peerRecord);
 
@@ -291,6 +351,15 @@ class VoiceChatService {
     try {
       if (signal.sdp) {
         await pc.setRemoteDescription(new RTCSessionDescription(signal.sdp));
+
+        // Flush any queued candidates that arrived before remoteDescription was set
+        if (peerRecord.pendingCandidates && peerRecord.pendingCandidates.length > 0) {
+          for (const cand of peerRecord.pendingCandidates) {
+            await pc.addIceCandidate(new RTCIceCandidate(cand)).catch(() => {});
+          }
+          peerRecord.pendingCandidates = [];
+        }
+
         if (signal.sdp.type === "offer") {
           const answer = await pc.createAnswer();
           await pc.setLocalDescription(answer);
@@ -300,7 +369,14 @@ class VoiceChatService {
           });
         }
       } else if (signal.candidate) {
-        await pc.addIceCandidate(new RTCIceCandidate(signal.candidate));
+        if (!pc.remoteDescription || !pc.remoteDescription.type) {
+          if (!peerRecord.pendingCandidates) {
+            peerRecord.pendingCandidates = [];
+          }
+          peerRecord.pendingCandidates.push(signal.candidate);
+        } else {
+          await pc.addIceCandidate(new RTCIceCandidate(signal.candidate)).catch(() => {});
+        }
       }
     } catch (err) {
       console.warn("Signal handling error:", err);
@@ -312,18 +388,23 @@ class VoiceChatService {
    */
   startVoiceActivityDetection() {
     if (this.analyserInterval) clearInterval(this.analyserInterval);
+    if (!this.analyserNode) return;
 
     const dataArray = new Uint8Array(this.analyserNode.frequencyBinCount);
 
     this.analyserInterval = setInterval(() => {
-      if (this.isMuted || !this.localStream) {
+      if (this.isMuted || !this.localStream || !this.analyserNode) {
         if (this.isSpeaking) {
           this.setSpeaking(false);
         }
         return;
       }
 
-      this.analyserNode.getByteTimeDomainData(dataArray);
+      try {
+        this.analyserNode.getByteTimeDomainData(dataArray);
+      } catch (e) {
+        return;
+      }
 
       // Compute Root Mean Square (RMS) volume
       let sum = 0;
@@ -405,7 +486,7 @@ class VoiceChatService {
    */
   toggleDeafen() {
     this.isDeafened = !this.isDeafened;
-    this.updateSpatialAudio();
+    this._applyAudioSettings();
     this.notifyState();
     return this.isDeafened;
   }
@@ -415,82 +496,81 @@ class VoiceChatService {
    */
   toggleSpatial() {
     this.isSpatialEnabled = !this.isSpatialEnabled;
-    this.updateSpatialAudio();
+    this._applyAudioSettings();
     this.notifyState();
     return this.isSpatialEnabled;
   }
 
   /**
-   * Spatial & Proximity attenuation calculations.
-   * Updates GainNode and StereoPannerNode based on table order and game rules.
+   * Apply volume/pan to all peer audio elements based on current state.
+   * Called both by spatial updates and deafen/mute toggles.
+   * @private
    */
-  updateSpatialAudio(players = [], currentUserId = null, phase = null, myRole = null) {
-    if (!this.audioContext) return;
-
-    if (this.audioContext.state === "suspended") {
-      this.audioContext.resume().catch(() => {});
-    }
-
+  _applyAudioSettings(players = [], currentUserId = null, phase = null) {
     const meIndex = players.findIndex((p) => p.id === currentUserId);
     const totalPlayers = players.length;
     const mePlayer = players.find((p) => p.id === currentUserId);
     const meAlive = mePlayer ? mePlayer.status === PLAYER_STATUS.ALIVE : true;
 
     for (const [, peerData] of this.peers.entries()) {
-      if (!peerData.gainNode) continue;
-
-      if (this.isDeafened) {
-        peerData.gainNode.gain.setValueAtTime(0, this.audioContext.currentTime);
-        continue;
-      }
+      if (!peerData.audioElement) continue;
 
       const peerPlayer = players.find((p) => p.id === peerData.playerId);
       const peerAlive = peerPlayer ? peerPlayer.status === PLAYER_STATUS.ALIVE : true;
 
-      // 1. Elimination Mute Rule:
-      // Living cannot hear ghosts!
+      // 1. Elimination Mute Rule: Living cannot hear ghosts
       if (meAlive && !peerAlive) {
-        peerData.gainNode.gain.setValueAtTime(0, this.audioContext.currentTime);
+        peerData.audioElement.volume = 0;
         continue;
       }
 
-      // 2. Night Phase Rule:
-      // The village sleeps in quiet darkness during night phases.
+      // 2. Night Phase Rule: Silent night for all (game rule)
       if (phase === PHASES.NIGHT || phase === PHASES.NIGHT_1) {
-        peerData.gainNode.gain.setValueAtTime(0, this.audioContext.currentTime);
+        peerData.audioElement.volume = 0;
         continue;
       }
 
-      // 3. Spatial Table Distance Attenuation & Stereo Pan:
-      let targetGain = 1.0;
-      let targetPan = 0.0;
+      // 3. Deafen: mute all peers
+      if (this.isDeafened) {
+        peerData.audioElement.volume = 0;
+        continue;
+      }
+
+      // 4. Spatial Table Distance Attenuation
+      let targetVolume = 1.0;
 
       if (this.isSpatialEnabled && meIndex !== -1 && totalPlayers > 1) {
         const peerIndex = players.findIndex((p) => p.id === peerData.playerId);
         if (peerIndex !== -1) {
           const diff = (peerIndex - meIndex + totalPlayers) % totalPlayers;
           const angle = (diff / totalPlayers) * 2 * Math.PI;
-
-          // Stereo pan: left is negative, right is positive
-          targetPan = Math.sin(angle) * 0.7;
-
           // Distance across table: 0 for direct neighbor up to 1.0 for opposite
           const distanceNorm = Math.sqrt((1 - Math.cos(angle)) ** 2 + Math.sin(angle) ** 2) / 2;
-          // Gain scales gently from 1.0 down to 0.60
-          targetGain = Math.max(0.60, 1.0 - distanceNorm * 0.40);
+          // Volume scales gently from 1.0 down to 0.55 for the farthest peer
+          targetVolume = Math.max(0.55, 1.0 - distanceNorm * 0.45);
         }
       }
 
-      peerData.gainNode.gain.setTargetAtTime(targetGain, this.audioContext.currentTime, 0.1);
-      if (peerData.pannerNode && peerData.pannerNode.pan) {
-        peerData.pannerNode.pan.setTargetAtTime(targetPan, this.audioContext.currentTime, 0.1);
-      }
+      peerData.audioElement.volume = targetVolume;
     }
+  }
+
+  /**
+   * Spatial & Proximity attenuation calculations.
+   * Updates HTMLMediaElement volume based on table order and game rules.
+   */
+  updateSpatialAudio(players = [], currentUserId = null, phase = null, myRole = null) {
+    this._applyAudioSettings(players, currentUserId, phase);
   }
 
   removePeer(socketId) {
     const peerData = this.peers.get(socketId);
     if (peerData) {
+      if (peerData.audioElement) {
+        peerData.audioElement.pause();
+        peerData.audioElement.srcObject = null;
+        peerData.audioElement.remove();
+      }
       peerData.peerConnection.close();
       this.peers.delete(socketId);
     }
@@ -525,6 +605,8 @@ class VoiceChatService {
     this.mutedUsers.clear();
     this.isSpeaking = false;
     this.isInitialized = false;
+    this.roomCode = null;
+    this.currentPlayerId = null;
     this.notifyState();
   }
 }

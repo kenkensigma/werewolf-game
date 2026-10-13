@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { ROLE_METADATA, ROLES } from "../../constants/index.js";
+import { audioService, SFX_TYPES } from "../../services/audioService.js";
 import "./RoleRevealScreen.css";
 
 export function RoleRevealScreen({
@@ -20,7 +21,13 @@ export function RoleRevealScreen({
   const colorAccent = roleInfo?.colorAccent || "#D8C8A8";
 
   const handleCardToggle = () => {
-    setIsFlipped((prev) => !prev);
+    setIsFlipped((prev) => {
+      const next = !prev;
+      if (next) {
+        audioService.playSfx(SFX_TYPES.ROLE_REVEAL);
+      }
+      return next;
+    });
   };
 
   const handleKeyDown = (e) => {

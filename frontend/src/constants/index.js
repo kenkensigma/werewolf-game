@@ -63,6 +63,7 @@ export const SOCKET_EVENTS = Object.freeze({
   ROOM_JOIN: "room:join",
   ROOM_LEAVE: "room:leave",
   ROOM_CONFIGURE: "room:configure",
+  ROOM_KICK: "room:kick",
   GAME_START: "game:start",
   DISCUSSION_CHAT: "discussion:chat",
   VOTE_SUBMIT: "vote:submit",
@@ -95,6 +96,7 @@ export const SOCKET_EVENTS = Object.freeze({
   GAME_ELIMINATION: "game:elimination",
   GAME_OVER: "game:over",
   SESSION_RESUMED: "session:resumed",
+  PLAYER_KICKED: "player:kicked",
 });
 
 export const ROLE_METADATA = Object.freeze({

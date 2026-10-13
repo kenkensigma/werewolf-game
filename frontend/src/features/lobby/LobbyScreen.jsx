@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { VoiceControlsWidget } from "../voice/VoiceControlsWidget.jsx";
 import "./LobbyScreen.css";
 
 const DEFAULT_CONFIG = {
@@ -58,9 +59,11 @@ export function LobbyScreen({
   onStartGame,
   onLeaveRoom,
   onAddTestPlayers,
+  onKickPlayer,
   isStarting,
 }) {
   const [copied, setCopied] = useState(false);
+  const [kickConfirmId, setKickConfirmId] = useState(null);
 
   const isHost = currentPlayer?.isHost;
   const config = room.config || DEFAULT_CONFIG;
@@ -168,6 +171,7 @@ export function LobbyScreen({
           <ul className="player-list" aria-label="List of players in room">
             {room.players.map((player) => {
               const isYou = player.id === currentPlayer?.id;
+              const isKickPending = kickConfirmId === player.id;
               return (
                 <li
                   key={player.id}
@@ -183,11 +187,52 @@ export function LobbyScreen({
                     {isYou && <span className="player-badge-you">(You)</span>}
                   </div>
 
-                  {player.isHost && (
-                    <span className="player-badge-host" title="Room Host">
-                      Host
-                    </span>
-                  )}
+                  <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                    {player.isHost && (
+                      <span className="player-badge-host" title="Room Host">
+                        Host
+                      </span>
+                    )}
+
+                    {/* Kick button — only visible to host, not for themselves or other host */}
+                    {isHost && !isYou && !player.isHost && onKickPlayer && (
+                      isKickPending ? (
+                        <>
+                          <button
+                            type="button"
+                            className="kick-confirm-btn"
+                            onClick={() => {
+                              onKickPlayer(player.id);
+                              setKickConfirmId(null);
+                            }}
+                            aria-label={`Confirm kick ${player.displayName}`}
+                            title="Confirm kick"
+                          >
+                            Kick?
+                          </button>
+                          <button
+                            type="button"
+                            className="kick-cancel-btn"
+                            onClick={() => setKickConfirmId(null)}
+                            aria-label="Cancel kick"
+                            title="Cancel"
+                          >
+                            ✕
+                          </button>
+                        </>
+                      ) : (
+                        <button
+                          type="button"
+                          className="kick-btn"
+                          onClick={() => setKickConfirmId(player.id)}
+                          aria-label={`Kick ${player.displayName}`}
+                          title={`Kick ${player.displayName}`}
+                        >
+                          ✕
+                        </button>
+                      )
+                    )}
+                  </div>
                 </li>
               );
             })}
@@ -389,6 +434,16 @@ export function LobbyScreen({
           </div>
         </section>
       </div>
+
+      {/* Lobby Voice Chat — chat with friends while waiting! */}
+      <VoiceControlsWidget
+        roomCode={room?.roomCode}
+        currentPlayerId={currentPlayer?.id}
+        players={room?.players || []}
+        currentUserId={currentPlayer?.id}
+        phase={null}
+        myRole={null}
+      />
     </div>
   );
 }

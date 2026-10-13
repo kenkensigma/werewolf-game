@@ -160,7 +160,59 @@ class RoomService {
     return this.getPublicRoomState(cleanCode);
   }
 
+  /**
+   * Host kicks a player from the lobby.
+   * @returns { kickedSocketId, room } or throws on error.
+   */
+  kickPlayer(hostSocketId, targetPlayerId) {
+    const sessionToken = this.socketToSession.get(hostSocketId);
+    if (!sessionToken) throw new Error("No active session");
+
+    const session = this.sessions.get(sessionToken);
+    if (!session) throw new Error("Session expired");
+
+    const room = this.roomsByCode.get(session.roomCode);
+    if (!room) throw new Error("Room not found");
+
+    if (room.hostId !== session.playerId) {
+      throw new Error("Only the host can kick players");
+    }
+
+    if (session.playerId === targetPlayerId) {
+      throw new Error("Host cannot kick themselves");
+    }
+
+    const targetIndex = room.players.findIndex((p) => p.id === targetPlayerId);
+    if (targetIndex === -1) throw new Error("Player not found in room");
+
+    const targetPlayer = room.players[targetIndex];
+    const kickedSocketId = targetPlayer.socketId;
+
+    // Remove from players list
+    room.players.splice(targetIndex, 1);
+
+    // Clean up session mappings for kicked player
+    for (const [token, s] of this.sessions.entries()) {
+      if (s.roomCode === session.roomCode && s.playerId === targetPlayerId) {
+        const kickedSock = this.socketToSession
+          ? [...this.socketToSession.entries()].find(([, t]) => t === token)?.[0]
+          : null;
+        if (kickedSock) this.socketToSession.delete(kickedSock);
+        this.sessions.delete(token);
+        break;
+      }
+    }
+
+    return {
+      kickedSocketId,
+      kickedPlayerName: targetPlayer.displayName,
+      room: this.getPublicRoomState(session.roomCode),
+      roomCode: session.roomCode,
+    };
+  }
+
   leaveRoom(socketId) {
+
     const sessionToken = this.socketToSession.get(socketId);
     if (!sessionToken) return null;
 
