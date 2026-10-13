@@ -53,6 +53,28 @@ class NightResolutionService {
       }
     }
 
+    // 4b. Collect Witch actions (heal elixir & lethal poison brew)
+    let healActive = false;
+    const witchPoisonTargets = [];
+
+    if (actions.witchActions) {
+      for (const [witchId, witchAction] of actions.witchActions.entries()) {
+        if (livingPlayersSnapshot.has(witchId)) {
+          const potions = this.actionService.getWitchPotions(game.id, witchId);
+          if (witchAction.heal && !potions.healUsed) {
+            healActive = true;
+            potions.healUsed = true;
+          }
+          if (witchAction.poisonTargetId && !potions.poisonUsed) {
+            if (livingPlayersSnapshot.has(witchAction.poisonTargetId)) {
+              witchPoisonTargets.push(witchAction.poisonTargetId);
+              potions.poisonUsed = true;
+            }
+          }
+        }
+      }
+    }
+
     // 5. Build raw attack list
     const incomingAttacks = [];
 
@@ -70,14 +92,17 @@ class NightResolutionService {
       });
     }
 
-    // 6. Filter attacks against Guard protection set
-    const successfulAttacks = incomingAttacks.filter(
-      (attack) => !protectedPlayerIds.has(attack.targetId)
-    );
+    // 6. Filter attacks against Guard protection set and Witch heal
+    const successfulAttacks = incomingAttacks.filter((attack) => {
+      if (attack.source === ROLES.WEREWOLF && healActive) {
+        return false; // Healed by Witch's Elixir of Life!
+      }
+      return !protectedPlayerIds.has(attack.targetId);
+    });
 
-    // 7. Deduplicate surviving eliminated targets
+    // 7. Deduplicate surviving eliminated targets (attacks + witch poison bypasses guard)
     const eliminatedPlayerIds = Array.from(
-      new Set(successfulAttacks.map((a) => a.targetId))
+      new Set([...successfulAttacks.map((a) => a.targetId), ...witchPoisonTargets])
     );
 
     // 8. Apply eliminations simultaneously to game state

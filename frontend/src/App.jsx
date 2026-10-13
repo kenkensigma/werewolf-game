@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { connectSocket, disconnectSocket, getSocket } from "./services/socket.js";
-import { SOCKET_EVENTS, PHASES } from "./constants/index.js";
+import { SOCKET_EVENTS, PHASES, ACTION_TYPES } from "./constants/index.js";
 import { LandingScreen } from "./features/landing/LandingScreen.jsx";
 import { LobbyScreen } from "./features/lobby/LobbyScreen.jsx";
 import { RoleRevealScreen } from "./features/role-reveal/RoleRevealScreen.jsx";
@@ -34,6 +34,7 @@ function App() {
   const [seerInvestigationResult, setSeerInvestigationResult] = useState(null);
   const [latestElimination, setLatestElimination] = useState(null);
   const [isRematching, setIsRematching] = useState(false);
+  const [witchPotions, setWitchPotions] = useState({ healUsed: false, poisonUsed: false });
 
   // Resume stored session on mount if available
   useEffect(() => {
@@ -107,6 +108,7 @@ function App() {
       setSubmittedNightTargetId(null);
       setSeerInvestigationResult(null);
       setLatestElimination(null);
+      setWitchPotions({ healUsed: false, poisonUsed: false });
     };
 
     const handleGameYourRole = (rolePayload) => {
@@ -157,6 +159,7 @@ function App() {
       setSubmittedNightTargetId(null);
       setSeerInvestigationResult(null);
       setLatestElimination(null);
+      setWitchPotions({ healUsed: false, poisonUsed: false });
       if (room) {
         setCurrentRoom(room);
       }
@@ -400,7 +403,12 @@ function App() {
 
     socket.emit(SOCKET_EVENTS.NIGHT_ACTION, { actionType, targetId }, (response) => {
       if (response?.success) {
-        setSubmittedNightTargetId(targetId);
+        setSubmittedNightTargetId(targetId || actionType);
+        if (actionType === ACTION_TYPES.WITCH_HEAL) {
+          setWitchPotions((prev) => ({ ...prev, healUsed: true }));
+        } else if (actionType === ACTION_TYPES.WITCH_POISON) {
+          setWitchPotions((prev) => ({ ...prev, poisonUsed: true }));
+        }
       } else {
         setErrorMessage(response?.error || "Night action rejected by server");
       }
@@ -425,14 +433,6 @@ function App() {
 
   const handleDismissElimination = useCallback(() => {
     setLatestElimination(null);
-  }, []);
-
-  // Dev Trigger Match Victory (Host)
-  const handleDevTriggerVictory = useCallback((winnerFaction) => {
-    const socket = getSocket();
-    if (!socket.connected) return;
-
-    socket.emit("game:dev-trigger-victory", { winnerFaction });
   }, []);
 
   // Rematch Action (Host)
@@ -539,7 +539,7 @@ function App() {
             onDismissSeerResult={handleDismissSeerResult}
             latestElimination={latestElimination}
             onDismissElimination={handleDismissElimination}
-            onDevTriggerVictory={handleDevTriggerVictory}
+            witchPotions={witchPotions}
           />
         )}
 

@@ -3,6 +3,7 @@ const ROLES = Object.freeze({
   SEER: "SEER",
   GUARD: "GUARD",
   HUNTER: "HUNTER",
+  WITCH: "WITCH",
   VILLAGER: "VILLAGER",
   TROUBLEMAKER: "TROUBLEMAKER",
 });
@@ -18,6 +19,7 @@ const ROLE_FACTIONS = Object.freeze({
   [ROLES.SEER]: FACTIONS.VILLAGE,
   [ROLES.GUARD]: FACTIONS.VILLAGE,
   [ROLES.HUNTER]: FACTIONS.VILLAGE,
+  [ROLES.WITCH]: FACTIONS.VILLAGE,
   [ROLES.VILLAGER]: FACTIONS.VILLAGE,
   [ROLES.TROUBLEMAKER]: FACTIONS.INDEPENDENT,
 });
@@ -45,6 +47,9 @@ const ACTION_TYPES = Object.freeze({
   GUARD_PROTECT: "GUARD_PROTECT",
   HUNTER_SHOOT: "HUNTER_SHOOT",
   HUNTER_SKIP: "HUNTER_SKIP",
+  WITCH_HEAL: "WITCH_HEAL",
+  WITCH_POISON: "WITCH_POISON",
+  WITCH_SKIP: "WITCH_SKIP",
 });
 
 const SEER_RESULTS = Object.freeze({
@@ -64,6 +69,17 @@ const SOCKET_EVENTS = Object.freeze({
   NIGHT_ACTION: "night:action",
   SESSION_RESUME: "session:resume",
   GAME_REMATCH: "game:rematch",
+
+  // Proximity Voice Chat events
+  VOICE_JOIN: "voice:join",
+  VOICE_LEAVE: "voice:leave",
+  VOICE_SIGNAL: "voice:signal",
+  VOICE_MUTE: "voice:mute",
+  VOICE_SPEAKING: "voice:speaking",
+  VOICE_PEER_JOINED: "voice:peer-joined",
+  VOICE_PEER_LEFT: "voice:peer-left",
+  VOICE_MUTE_STATE: "voice:mute-state",
+  VOICE_SPEAKING_STATE: "voice:speaking-state",
 
   // Server to client
   ROOM_STATE: "room:state",
@@ -105,6 +121,12 @@ const ROLE_METADATA = Object.freeze({
     faction: FACTIONS.VILLAGE,
     description: "Take aim under the moonlight: shoot a suspect each night, or hold your fire.",
     colorAccent: "#A7A2A0",
+  },
+  [ROLES.WITCH]: {
+    name: "Witch",
+    faction: FACTIONS.VILLAGE,
+    description: "Brewmaster of mystical tonics. You hold an Elixir of Life to save the wolves' victim and a Poison Brew to slay a suspect.",
+    colorAccent: "#9B59B6",
   },
   [ROLES.VILLAGER]: {
     name: "Villager",

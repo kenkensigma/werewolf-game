@@ -9,7 +9,6 @@ export function GameHeader({
   phaseDeadline,
   isHost,
   onProceedToVote,
-  onDevTriggerVictory,
 }) {
   const [secondsRemaining, setSecondsRemaining] = useState(0);
 

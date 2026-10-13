@@ -14,6 +14,7 @@ export function NightActionPanel({
   isAlive,
   isHost,
   onProceedToDawn,
+  witchPotions,
 }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const role = privateRole?.role;
@@ -22,10 +23,15 @@ export function NightActionPanel({
   const submittedCandidateName =
     submittedTargetId === SKIP_TARGET
       ? "Held Fire (Skip)"
+      : submittedTargetId === "WITCH_HEALED" || submittedTargetId === ACTION_TYPES.WITCH_HEAL
+      ? "Elixir Used (Healed Victim)"
+      : submittedTargetId === "WITCH_SKIPPED" || submittedTargetId === ACTION_TYPES.WITCH_SKIP
+      ? "Potions Held (Skip)"
       : livingCandidates.find((c) => c.id === submittedTargetId)?.displayName || "Target Confirmed";
 
   const handleAction = async (actionType, targetId) => {
-    if (!targetId || isSubmitting || hasSubmitted) return;
+    if (isSubmitting || hasSubmitted) return;
+    if (!targetId && actionType !== ACTION_TYPES.WITCH_HEAL && actionType !== ACTION_TYPES.WITCH_SKIP) return;
     setIsSubmitting(true);
     try {
       await onSubmitNightAction(actionType, targetId);
@@ -74,11 +80,7 @@ export function NightActionPanel({
 
         {isHost && (
           <div className="host-hasten-container">
-            <button
-              type="button"
-              className="gothic-btn gothic-btn-outline"
-              onClick={onProceedToDawn}
-            >
+            <button type="button" className="gothic-btn gothic-btn-outline" onClick={onProceedToDawn}>
               Hasten the Dawn (Host)
             </button>
           </div>
@@ -87,7 +89,130 @@ export function NightActionPanel({
     );
   }
 
-  // 3. Active Night Roles: Werewolf, Seer, Guard, Hunter
+  // 3. Witch Special UI
+  if (role === ROLES.WITCH) {
+    const healUsed = witchPotions?.healUsed ?? false;
+    const poisonUsed = witchPotions?.poisonUsed ?? false;
+
+    return (
+      <div
+        className="gothic-panel night-action-panel active-role-mode role-witch"
+        role="region"
+        aria-label="Witch Night Action"
+      >
+        <div className="panel-header">
+          <h3 className="panel-title">Potion Brewmaster</h3>
+          <span className="phase-cycle-label" style={{ color: privateRole?.colorAccent || "#9B59B6" }}>
+            {privateRole?.role || "WITCH"}
+          </span>
+        </div>
+
+        <p className="night-flavor-text font-editorial">
+          The wolves have struck tonight. Consult your arcane stock and decide whether to intervene.
+        </p>
+
+        {!hasSubmitted ? (
+          <div className="night-selection-container">
+            <div className="witch-potion-card" style={{ opacity: healUsed ? 0.45 : 1 }}>
+              <div className="witch-potion-header">
+                <span className="witch-potion-icon" aria-hidden="true">🧪</span>
+                <span className="witch-potion-name">Elixir of Life</span>
+                {healUsed && <span className="witch-potion-used">(Consumed)</span>}
+              </div>
+              <p className="config-desc">
+                Save tonight's werewolf victim from their fate. Single use per match.
+              </p>
+              <button
+                type="button"
+                className="gothic-btn gothic-btn-moonlight"
+                disabled={isSubmitting || healUsed}
+                onClick={() => handleAction(ACTION_TYPES.WITCH_HEAL, null)}
+              >
+                {healUsed ? "Elixir Spent" : "Use Elixir of Life"}
+              </button>
+            </div>
+
+            <div className="witch-potion-card" style={{ opacity: poisonUsed ? 0.45 : 1 }}>
+              <div className="witch-potion-header">
+                <span className="witch-potion-icon" aria-hidden="true">&#x2620;</span>
+                <span className="witch-potion-name">Poison Brew</span>
+                {poisonUsed && <span className="witch-potion-used">(Consumed)</span>}
+              </div>
+              <p className="config-desc">
+                Administer lethal brew to a suspect tonight. Single use per match. Cannot be blocked by Guard.
+              </p>
+
+              <label htmlFor="witch-poison-select" className="night-target-label font-display">
+                Select Target:
+              </label>
+              <select
+                id="witch-poison-select"
+                className="night-target-select font-sans"
+                value={selectedCandidate?.id || ""}
+                onChange={(e) => onSelectCandidate(e.target.value)}
+                disabled={poisonUsed}
+              >
+                <option value="">-- Choose a suspect --</option>
+                {livingCandidates.map((candidate) => (
+                  <option key={candidate.id} value={candidate.id}>
+                    {candidate.displayName}
+                  </option>
+                ))}
+              </select>
+
+              <button
+                type="button"
+                className="gothic-btn gothic-btn-burgundy"
+                disabled={isSubmitting || poisonUsed || !selectedCandidate}
+                onClick={() => handleAction(ACTION_TYPES.WITCH_POISON, selectedCandidate?.id)}
+              >
+                {poisonUsed
+                  ? "Poison Spent"
+                  : selectedCandidate
+                  ? `Poison ${selectedCandidate.displayName}`
+                  : "Select a Target"}
+              </button>
+            </div>
+
+            <button
+              type="button"
+              className="gothic-btn gothic-btn-outline"
+              style={{ marginTop: "8px", width: "100%" }}
+              disabled={isSubmitting}
+              onClick={() => handleAction(ACTION_TYPES.WITCH_SKIP, null)}
+            >
+              Hold All Potions (Skip Night)
+            </button>
+          </div>
+        ) : (
+          <div className="night-confirmed-box" role="status">
+            <div className="confirmed-icon" aria-hidden="true">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                <path d="m9 12 2 2 4-4" />
+              </svg>
+            </div>
+            <div>
+              <h4 className="confirmed-title font-display">Witch Decision Locked</h4>
+              <p className="confirmed-desc font-editorial">
+                Decision: <strong>{submittedCandidateName}</strong>. The dawn will reveal all.
+              </p>
+            </div>
+          </div>
+        )}
+
+        {isHost && (
+          <div className="host-hasten-container">
+            <button type="button" className="gothic-btn gothic-btn-outline" onClick={onProceedToDawn}>
+              Hasten the Dawn (Host)
+            </button>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // 4. Active Night Roles: Werewolf, Seer, Guard, Hunter
   return (
     <div
       className={`gothic-panel night-action-panel active-role-mode role-${role?.toLowerCase()}`}
@@ -120,7 +245,6 @@ export function NightActionPanel({
           "Take aim with your silver arrow at a suspect tonight, or choose to hold your fire."}
       </p>
 
-      {/* Target Selector Dropdown / Grid Helper */}
       {!hasSubmitted ? (
         <div className="night-selection-container">
           <label htmlFor="night-target-select" className="night-target-label font-display">
@@ -140,7 +264,6 @@ export function NightActionPanel({
             ))}
           </select>
 
-          {/* Action Trigger Buttons */}
           <div className="night-actions-btn-group">
             {role === ROLES.WEREWOLF && (
               <button
@@ -149,9 +272,7 @@ export function NightActionPanel({
                 disabled={!selectedCandidate || isSubmitting}
                 onClick={() => handleAction(ACTION_TYPES.WEREWOLF_ATTACK, selectedCandidate.id)}
               >
-                {selectedCandidate
-                  ? `Hunt ${selectedCandidate.displayName}`
-                  : "Select Quarry to Hunt"}
+                {selectedCandidate ? `Hunt ${selectedCandidate.displayName}` : "Select Quarry to Hunt"}
               </button>
             )}
 
@@ -162,9 +283,7 @@ export function NightActionPanel({
                 disabled={!selectedCandidate || isSubmitting}
                 onClick={() => handleAction(ACTION_TYPES.SEER_INVESTIGATE, selectedCandidate.id)}
               >
-                {selectedCandidate
-                  ? `Divine ${selectedCandidate.displayName}`
-                  : "Select Soul to Divine"}
+                {selectedCandidate ? `Divine ${selectedCandidate.displayName}` : "Select Soul to Divine"}
               </button>
             )}
 
@@ -175,9 +294,7 @@ export function NightActionPanel({
                 disabled={!selectedCandidate || isSubmitting}
                 onClick={() => handleAction(ACTION_TYPES.GUARD_PROTECT, selectedCandidate.id)}
               >
-                {selectedCandidate
-                  ? `Protect ${selectedCandidate.displayName}`
-                  : "Select Soul to Shield"}
+                {selectedCandidate ? `Protect ${selectedCandidate.displayName}` : "Select Soul to Shield"}
               </button>
             )}
 
@@ -197,16 +314,13 @@ export function NightActionPanel({
                   disabled={!selectedCandidate || isSubmitting}
                   onClick={() => handleAction(ACTION_TYPES.HUNTER_SHOOT, selectedCandidate.id)}
                 >
-                  {selectedCandidate
-                    ? `Shoot ${selectedCandidate.displayName}`
-                    : "Select Target"}
+                  {selectedCandidate ? `Shoot ${selectedCandidate.displayName}` : "Select Target"}
                 </button>
               </div>
             )}
           </div>
         </div>
       ) : (
-        /* Action Locked / Submitted Confirmation */
         <div className="night-confirmed-box" role="status">
           <div className="confirmed-icon" aria-hidden="true">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -223,14 +337,9 @@ export function NightActionPanel({
         </div>
       )}
 
-      {/* Host Controls */}
       {isHost && (
         <div className="host-hasten-container">
-          <button
-            type="button"
-            className="gothic-btn gothic-btn-outline"
-            onClick={onProceedToDawn}
-          >
+          <button type="button" className="gothic-btn gothic-btn-outline" onClick={onProceedToDawn}>
             Hasten the Dawn (Host)
           </button>
         </div>

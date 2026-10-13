@@ -7,6 +7,7 @@ import { VotingPanel } from "./VotingPanel.jsx";
 import { EliminationBanner } from "./EliminationBanner.jsx";
 import { NightActionPanel } from "./NightActionPanel.jsx";
 import { SeerInvestigationModal } from "./SeerInvestigationModal.jsx";
+import { VoiceControlsWidget } from "../voice/VoiceControlsWidget.jsx";
 import "./ActiveGameView.css";
 
 export function ActiveGameView({
@@ -29,7 +30,7 @@ export function ActiveGameView({
   onDismissSeerResult,
   latestElimination,
   onDismissElimination,
-  onDevTriggerVictory,
+  witchPotions,
 }) {
   const [selectedCandidateId, setSelectedCandidateId] = useState(null);
   const [isSkipSelected, setIsSkipSelected] = useState(false);
@@ -88,7 +89,16 @@ export function ActiveGameView({
         phaseDeadline={gameState?.phaseDeadline}
         isHost={isHost}
         onProceedToVote={onProceedToVote}
-        onDevTriggerVictory={onDevTriggerVictory}
+      />
+
+      {/* 1b. Proximity Voice Chat Controls */}
+      <VoiceControlsWidget
+        roomCode={gameState?.roomCode || currentPlayer?.roomCode}
+        currentPlayerId={currentUserId}
+        players={players}
+        currentUserId={currentUserId}
+        phase={phase}
+        myRole={privateRole?.role}
       />
 
       {/* 2. Elimination Banner for Voting Results or Night Notices */}
@@ -181,6 +191,7 @@ export function ActiveGameView({
               isAlive={isAlive}
               isHost={isHost}
               onProceedToDawn={onProceedToDawn}
+              witchPotions={witchPotions}
             />
           )}
 

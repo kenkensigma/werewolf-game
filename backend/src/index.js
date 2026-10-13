@@ -3,6 +3,7 @@ const http = require("http");
 const cors = require("cors");
 const { Server } = require("socket.io");
 const { registerRoomHandlers } = require("./socket/roomHandlers.js");
+const { registerVoiceHandlers } = require("./socket/voiceHandlers.js");
 require("dotenv").config();
 
 const app = express();
@@ -33,6 +34,7 @@ io.on("connection", (socket) => {
   });
 
   registerRoomHandlers(io, socket);
+  registerVoiceHandlers(io, socket);
 
   socket.on("client:ping", (data, callback) => {
     const timestamp = Date.now();

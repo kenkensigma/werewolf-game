@@ -38,6 +38,10 @@ class RoomService {
       players: [hostPlayer],
       config: {
         werewolfCount: 2,
+        seerCount: 1,
+        guardCount: 2,
+        hunterCount: 2,
+        witchCount: 0,
         troublemakerEnabled: false,
         discussionTimer: 240, // 4 minutes per system.md
       },
@@ -150,7 +154,7 @@ class RoomService {
       throw new Error("Only the room host may configure game settings");
     }
 
-    const validatedConfig = roomConfigSchema.parse(newConfig);
+    const validatedConfig = roomConfigSchema.partial().parse(newConfig);
     room.config = { ...room.config, ...validatedConfig };
 
     return this.getPublicRoomState(cleanCode);
@@ -297,18 +301,19 @@ class RoomService {
     const totalPlayers = room.players.length;
     const connectedPlayers = room.players.filter((p) => p.isConnected).length;
 
-    // Fixed required village roles: 1 Seer + 2 Guards + 2 Hunters = 5
-    const fixedVillageRoles = 5;
-    const werewolfCount = room.config.werewolfCount;
+    const werewolfCount = room.config.werewolfCount ?? 2;
+    const seerCount = room.config.seerCount ?? 1;
+    const guardCount = room.config.guardCount ?? 2;
+    const hunterCount = room.config.hunterCount ?? 2;
+    const witchCount = room.config.witchCount ?? 0;
     const troublemakerCount = room.config.troublemakerEnabled ? 1 : 0;
+
+    const specialRolesTotal =
+      werewolfCount + seerCount + guardCount + hunterCount + witchCount + troublemakerCount;
     
     // Minimum players required to fit all roles and preserve at least 1 Villager
-    // Formula: fixedVillageRoles + werewolfCount + troublemakerCount + 1 (min villager)
-    const minPlayersRequired = fixedVillageRoles + werewolfCount + troublemakerCount + 1;
-
-    // Minimum player rule per system.md (min 8 players, min 9 if Troublemaker enabled)
-    const absoluteMin = room.config.troublemakerEnabled ? 9 : 8;
-    const effectiveMin = Math.max(minPlayersRequired, absoluteMin);
+    const minPlayersRequired = specialRolesTotal + 1;
+    const effectiveMin = Math.max(4, minPlayersRequired);
 
     if (totalPlayers < effectiveMin) {
       errors.push(
@@ -322,7 +327,7 @@ class RoomService {
       );
     }
 
-    const villagerCount = totalPlayers - (fixedVillageRoles + werewolfCount + troublemakerCount);
+    const villagerCount = totalPlayers - specialRolesTotal;
     if (villagerCount < 1) {
       errors.push(
         `Configuration leaves no slots for Villagers. Need at least 1 Villager.`

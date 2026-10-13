@@ -11,7 +11,9 @@ const SKIP_TARGET = "SKIP";
 class NightActionService {
   constructor() {
     this.actionsByGameId = new Map();
-    // gameId -> { werewolfTargets: Map, seerTarget: Map, guardTargets: Map, hunterTargets: Map }
+    // gameId -> { werewolfTargets: Map, seerTargets: Map, guardTargets: Map, hunterTargets: Map, witchActions: Map }
+    this.witchPotionsByGameId = new Map();
+    // gameId -> Map<witchId, { healUsed: boolean, poisonUsed: boolean }>
   }
 
   /**
@@ -23,6 +25,7 @@ class NightActionService {
       seerTargets: new Map(),     // seerId -> targetId
       guardTargets: new Map(),    // guardId -> targetId
       hunterTargets: new Map(),   // hunterId -> targetId (or SKIP)
+      witchActions: new Map(),    // witchId -> { heal: boolean, poisonTargetId: string|null, skip: boolean }
     });
   }
 
@@ -33,6 +36,20 @@ class NightActionService {
       actions = this.actionsByGameId.get(gameId);
     }
     return actions;
+  }
+
+  getWitchPotions(gameId, witchId) {
+    let gamePotions = this.witchPotionsByGameId.get(gameId);
+    if (!gamePotions) {
+      gamePotions = new Map();
+      this.witchPotionsByGameId.set(gameId, gamePotions);
+    }
+    let potions = gamePotions.get(witchId);
+    if (!potions) {
+      potions = { healUsed: false, poisonUsed: false };
+      gamePotions.set(witchId, potions);
+    }
+    return potions;
   }
 
   /**
@@ -57,8 +74,14 @@ class NightActionService {
     const actions = this.getGameActions(game.id);
     const cleanTarget = targetId === SKIP_TARGET ? SKIP_TARGET : targetId;
 
-    // Validate self-targeting rules
-    if (cleanTarget !== SKIP_TARGET) {
+    // Validate self-targeting rules for target-dependent actions
+    if (
+      actionType !== ACTION_TYPES.WITCH_HEAL &&
+      actionType !== ACTION_TYPES.WITCH_SKIP &&
+      cleanTarget !== SKIP_TARGET &&
+      cleanTarget !== null &&
+      cleanTarget !== undefined
+    ) {
       if (cleanTarget === actorId) {
         throw new Error("You cannot target yourself with this ability");
       }
@@ -117,6 +140,43 @@ class NightActionService {
         break;
       }
 
+      case ACTION_TYPES.WITCH_HEAL: {
+        if (role !== ROLES.WITCH) {
+          throw new Error("Only living Witches may concoct healing elixirs");
+        }
+        const potions = this.getWitchPotions(game.id, actorId);
+        if (potions.healUsed) {
+          throw new Error("Your healing elixir has already been consumed this match");
+        }
+        const existing = actions.witchActions.get(actorId) || {};
+        actions.witchActions.set(actorId, { ...existing, heal: true });
+        break;
+      }
+
+      case ACTION_TYPES.WITCH_POISON: {
+        if (role !== ROLES.WITCH) {
+          throw new Error("Only living Witches may brew lethal poison");
+        }
+        const potions = this.getWitchPotions(game.id, actorId);
+        if (potions.poisonUsed) {
+          throw new Error("Your lethal poison brew has already been consumed this match");
+        }
+        if (!cleanTarget || cleanTarget === SKIP_TARGET) {
+          throw new Error("You must select a living player to administer poison to");
+        }
+        const existing = actions.witchActions.get(actorId) || {};
+        actions.witchActions.set(actorId, { ...existing, poisonTargetId: cleanTarget });
+        break;
+      }
+
+      case ACTION_TYPES.WITCH_SKIP: {
+        if (role !== ROLES.WITCH) {
+          throw new Error("Only living Witches may perform witch abilities");
+        }
+        actions.witchActions.set(actorId, { skip: true });
+        break;
+      }
+
       default:
         throw new Error(`Unknown night action type: ${actionType}`);
     }
@@ -126,6 +186,7 @@ class NightActionService {
       actorId,
       actionType,
       targetId: cleanTarget,
+      witchPotions: role === ROLES.WITCH ? this.getWitchPotions(game.id, actorId) : undefined,
     };
   }
 

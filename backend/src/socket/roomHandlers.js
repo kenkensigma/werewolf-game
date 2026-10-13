@@ -95,7 +95,7 @@ function registerRoomHandlers(io, socket) {
         throw new Error("Session expired or invalid");
       }
 
-      const validatedConfig = roomConfigSchema.parse(payload);
+      const validatedConfig = roomConfigSchema.partial().parse(payload);
       const updatedRoom = roomService.configureRoom(
         session.roomCode,
         session.playerId,
@@ -456,9 +456,13 @@ function registerRoomHandlers(io, socket) {
     }
   });
 
-  // 13. Add Test Villagers (Dev tool for testing)
+  // 13. Add Test Villagers (Development environment only)
   socket.on("room:add-test-players", (payload, callback) => {
     try {
+      if (process.env.NODE_ENV === "production") {
+        throw new Error("Test villagers cannot be summoned in production");
+      }
+
       const sessionToken = roomService.socketToSession.get(socket.id);
       if (!sessionToken) throw new Error("No active session");
 
@@ -478,57 +482,6 @@ function registerRoomHandlers(io, socket) {
 
       if (typeof callback === "function") {
         callback({ success: true, room: updatedRoom });
-      }
-    } catch (err) {
-      if (typeof callback === "function") {
-        callback({ success: false, error: err.message });
-      }
-    }
-  });
-
-  // 14. Dev Helper: Trigger match conclusion for testing
-  socket.on("game:dev-trigger-victory", ({ winnerFaction }, callback) => {
-    try {
-      const sessionToken = roomService.socketToSession.get(socket.id);
-      if (!sessionToken) return;
-
-      const session = roomService.sessions.get(sessionToken);
-      if (!session) return;
-
-      const game = gameStateService.getGameByRoomCode(session.roomCode);
-      if (!game) return;
-
-      const room = roomService.getRoomByCode(session.roomCode);
-      if (!room || room.hostId !== session.playerId) return;
-
-      const targetWinner = winnerFaction || "VILLAGE";
-      const winReason =
-        targetWinner === "VILLAGE"
-          ? "All Werewolves have been eliminated. The Village is safe once more!"
-          : targetWinner === "WEREWOLF"
-          ? "The Werewolves have reached parity and overpowered the town!"
-          : "The Troublemaker was executed by tribunal decree and has achieved victory!";
-
-      const publicState = gameStateService.transitionPhase(game.id, PHASES.GAME_OVER, null);
-      publicState.winner = targetWinner;
-      publicState.winReason = winReason;
-      publicState.revealedRoles = Array.from(game.roleAssignments.entries()).map(([id, info]) => {
-        const p = game.players.find((player) => player.id === id);
-        return {
-          playerId: id,
-          displayName: p?.displayName || "Unknown",
-          role: info.role,
-          faction: info.faction,
-          status: p?.status || PLAYER_STATUS.ALIVE,
-          eliminatedAtPhase: p?.eliminatedAtPhase || null,
-        };
-      });
-
-      io.to(game.roomCode).emit(SOCKET_EVENTS.GAME_OVER, publicState);
-      io.to(game.roomCode).emit(SOCKET_EVENTS.GAME_PHASE, publicState);
-
-      if (typeof callback === "function") {
-        callback({ success: true, game: publicState });
       }
     } catch (err) {
       if (typeof callback === "function") {

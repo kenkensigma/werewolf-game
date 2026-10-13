@@ -11,12 +11,25 @@ class RoleAssignmentService {
    * Generates the role pool array based on player count and chamber configuration.
    */
   generateRolePool(totalPlayers, config) {
-    const werewolfCount = config.werewolfCount;
+    const werewolfCount = config.werewolfCount ?? 2;
+    const seerCount = config.seerCount !== undefined ? config.seerCount : 1;
+    const guardCount =
+      config.guardCount !== undefined
+        ? config.guardCount
+        : config.seerCount !== undefined
+        ? 1
+        : 2;
+    const hunterCount =
+      config.hunterCount !== undefined
+        ? config.hunterCount
+        : config.seerCount !== undefined
+        ? 1
+        : 2;
+    const witchCount = config.witchCount !== undefined ? config.witchCount : 0;
     const troublemakerCount = config.troublemakerEnabled ? 1 : 0;
-    
-    // Fixed required roles: 1 Seer, 2 Guards, 2 Hunters
-    const fixedVillageCount = 5;
-    const assignedSpecialCount = werewolfCount + troublemakerCount + fixedVillageCount;
+
+    const assignedSpecialCount =
+      werewolfCount + seerCount + guardCount + hunterCount + witchCount + troublemakerCount;
 
     if (totalPlayers < assignedSpecialCount + 1) {
       throw new Error(
@@ -32,11 +45,18 @@ class RoleAssignmentService {
     }
 
     // 2. Village special roles
-    pool.push(ROLES.SEER);
-    pool.push(ROLES.GUARD);
-    pool.push(ROLES.GUARD);
-    pool.push(ROLES.HUNTER);
-    pool.push(ROLES.HUNTER);
+    for (let i = 0; i < seerCount; i++) {
+      pool.push(ROLES.SEER);
+    }
+    for (let i = 0; i < guardCount; i++) {
+      pool.push(ROLES.GUARD);
+    }
+    for (let i = 0; i < hunterCount; i++) {
+      pool.push(ROLES.HUNTER);
+    }
+    for (let i = 0; i < witchCount; i++) {
+      pool.push(ROLES.WITCH);
+    }
 
     // 3. Optional Troublemaker
     if (troublemakerCount > 0) {

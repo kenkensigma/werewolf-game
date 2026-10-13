@@ -19,7 +19,31 @@ const roomConfigSchema = z.object({
     .int("Werewolf count must be an integer")
     .min(1, "At least 1 Werewolf is required")
     .max(8, "Cannot exceed 8 Werewolves"),
-  troublemakerEnabled: z.boolean(),
+  seerCount: z
+    .number()
+    .int("Seer count must be an integer")
+    .min(0, "Seer count cannot be negative")
+    .max(4, "Cannot exceed 4 Seers")
+    .default(1),
+  guardCount: z
+    .number()
+    .int("Guard count must be an integer")
+    .min(0, "Guard count cannot be negative")
+    .max(4, "Cannot exceed 4 Guards")
+    .default(2),
+  hunterCount: z
+    .number()
+    .int("Hunter count must be an integer")
+    .min(0, "Hunter count cannot be negative")
+    .max(4, "Cannot exceed 4 Hunters")
+    .default(2),
+  witchCount: z
+    .number()
+    .int("Witch count must be an integer")
+    .min(0, "Witch count cannot be negative")
+    .max(4, "Cannot exceed 4 Witches")
+    .default(0),
+  troublemakerEnabled: z.boolean().default(false),
   discussionTimer: z
     .number()
     .int("Discussion timer must be an integer in seconds")

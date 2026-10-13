@@ -148,3 +148,47 @@
   width: 100%;
   min-height: 44px;
 }
+
+/* Witch Role Styles */
+.night-action-panel.role-witch {
+  border-color: rgba(155, 89, 182, 0.5);
+  box-shadow: 0 8px 32px rgba(155, 89, 182, 0.15);
+}
+
+.witch-potion-card {
+  background: rgba(155, 89, 182, 0.06);
+  border: 1px solid rgba(155, 89, 182, 0.25);
+  border-radius: var(--radius-sm);
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  transition: opacity 0.3s ease;
+}
+
+.witch-potion-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 2px;
+}
+
+.witch-potion-icon {
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.witch-potion-name {
+  font-family: var(--font-display);
+  font-size: var(--text-sm);
+  font-weight: 700;
+  color: var(--color-gold);
+  letter-spacing: 0.05em;
+}
+
+.witch-potion-used {
+  font-size: var(--text-xs);
+  color: var(--color-muted);
+  font-style: italic;
+  margin-left: auto;
+}

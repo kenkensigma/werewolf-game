@@ -1,6 +1,56 @@
 import { useState } from "react";
 import "./LobbyScreen.css";
 
+const DEFAULT_CONFIG = {
+  werewolfCount: 2,
+  seerCount: 1,
+  guardCount: 2,
+  hunterCount: 2,
+  witchCount: 0,
+  troublemakerEnabled: false,
+  discussionTimer: 240,
+};
+
+function RoleStepper({ label, description, value, min, max, onChange, isHost, colorAccent }) {
+  return (
+    <div className="config-group">
+      <div className="config-label-row">
+        <span className="config-label" style={{ color: isHost ? colorAccent || undefined : undefined }}>
+          {label}
+        </span>
+        <span className="config-desc">{description}</span>
+      </div>
+      {isHost ? (
+        <div className="stepper-control">
+          <button
+            type="button"
+            className="stepper-btn"
+            onClick={() => onChange(-1)}
+            disabled={value <= min}
+            aria-label={`Decrease ${label}`}
+          >
+            -
+          </button>
+          <span className="stepper-value tabular-nums">{value}</span>
+          <button
+            type="button"
+            className="stepper-btn"
+            onClick={() => onChange(1)}
+            disabled={value >= max}
+            aria-label={`Increase ${label}`}
+          >
+            +
+          </button>
+        </div>
+      ) : (
+        <span className="info-value tabular-nums">
+          {value > 0 ? `${value} ${label}${value !== 1 ? "s" : ""}` : `None`}
+        </span>
+      )}
+    </div>
+  );
+}
+
 export function LobbyScreen({
   room,
   currentPlayer,
@@ -13,14 +63,10 @@ export function LobbyScreen({
   const [copied, setCopied] = useState(false);
 
   const isHost = currentPlayer?.isHost;
-  const config = room.config || {
-    werewolfCount: 2,
-    troublemakerEnabled: false,
-    discussionTimer: 240,
-  };
+  const config = room.config || DEFAULT_CONFIG;
   const validation = room.validation || {
     valid: false,
-    minPlayersRequired: config.troublemakerEnabled ? 9 : 8,
+    minPlayersRequired: 6,
     totalPlayers: room.players?.length || 0,
     errors: ["Awaiting players"],
   };
@@ -31,38 +77,48 @@ export function LobbyScreen({
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      // Fallback
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     }
   };
 
-  const handleWerewolfChange = (delta) => {
+  const handleRoleChange = (field, delta) => {
     if (!isHost) return;
-    const newCount = Math.max(1, Math.min(8, config.werewolfCount + delta));
-    if (newCount !== config.werewolfCount) {
-      onConfigureRoom({
-        ...config,
-        werewolfCount: newCount,
-      });
+    const min = field === "werewolfCount" ? 1 : 0;
+    const max = field === "werewolfCount" ? 8 : 4;
+    const current = config[field] ?? (field === "werewolfCount" ? 2 : field === "seerCount" || field === "guardCount" || field === "hunterCount" ? 1 : 0);
+    const newCount = Math.max(min, Math.min(max, current + delta));
+    if (newCount !== current) {
+      onConfigureRoom({ ...config, [field]: newCount });
     }
   };
 
   const handleTroublemakerToggle = () => {
     if (!isHost) return;
-    onConfigureRoom({
-      ...config,
-      troublemakerEnabled: !config.troublemakerEnabled,
-    });
+    onConfigureRoom({ ...config, troublemakerEnabled: !config.troublemakerEnabled });
   };
 
   const handleTimerChange = (e) => {
     if (!isHost) return;
-    onConfigureRoom({
-      ...config,
-      discussionTimer: parseInt(e.target.value, 10),
-    });
+    onConfigureRoom({ ...config, discussionTimer: parseInt(e.target.value, 10) });
   };
+
+  const werewolfCount = config.werewolfCount ?? 2;
+  const seerCount = config.seerCount ?? 1;
+  const guardCount = config.guardCount ?? 2;
+  const hunterCount = config.hunterCount ?? 2;
+  const witchCount = config.witchCount ?? 0;
+  const troublemakerEnabled = config.troublemakerEnabled ?? false;
+
+  const roleBreakdown = [
+    werewolfCount > 0 && `${werewolfCount} Werewolf${werewolfCount !== 1 ? "es" : ""}`,
+    seerCount > 0 && `${seerCount} Seer${seerCount !== 1 ? "s" : ""}`,
+    guardCount > 0 && `${guardCount} Guard${guardCount !== 1 ? "s" : ""}`,
+    hunterCount > 0 && `${hunterCount} Hunter${hunterCount !== 1 ? "s" : ""}`,
+    witchCount > 0 && `${witchCount} Witch${witchCount !== 1 ? "es" : ""}`,
+    troublemakerEnabled && "1 Troublemaker",
+    validation.villagerCount > 0 && `${validation.villagerCount} Villager${validation.villagerCount !== 1 ? "s" : ""}`,
+  ].filter(Boolean);
 
   return (
     <div className="lobby-container" role="region" aria-label="Game Lobby">
@@ -150,82 +206,109 @@ export function LobbyScreen({
           </div>
 
           <div className="config-form">
-            {/* Werewolf Count */}
-            <div className="config-group">
-              <div className="config-label-row">
-                <span className="config-label">Werewolf Count</span>
-                <span className="config-desc">Pack Size</span>
-              </div>
-              {isHost ? (
-                <div className="stepper-control">
-                  <button
-                    type="button"
-                    className="stepper-btn"
-                    onClick={() => handleWerewolfChange(-1)}
-                    disabled={config.werewolfCount <= 1}
-                    aria-label="Decrease Werewolf count"
-                  >
-                    -
-                  </button>
-                  <span className="stepper-value tabular-nums">{config.werewolfCount}</span>
-                  <button
-                    type="button"
-                    className="stepper-btn"
-                    onClick={() => handleWerewolfChange(1)}
-                    disabled={config.werewolfCount >= 8}
-                    aria-label="Increase Werewolf count"
-                  >
-                    +
-                  </button>
-                </div>
-              ) : (
-                <span className="info-value tabular-nums">{config.werewolfCount} Werewolves</span>
-              )}
-              <p className="config-desc">
-                Default 2 beasts hunt the village each night.
-              </p>
-            </div>
+            {/* --- Werewolf Pack --- */}
+            <div className="config-section-label">Werewolf Faction</div>
 
-            {/* Troublemaker Toggle */}
+            <RoleStepper
+              label="Werewolf"
+              description="Pack Size"
+              value={werewolfCount}
+              min={1}
+              max={8}
+              onChange={(d) => handleRoleChange("werewolfCount", d)}
+              isHost={isHost}
+              colorAccent="#8D343B"
+            />
+
+            {/* --- Village Special Roles --- */}
+            <div className="config-section-label" style={{ marginTop: "12px" }}>Village Special Roles</div>
+
+            <RoleStepper
+              label="Seer"
+              description="Divine Investigator"
+              value={seerCount}
+              min={0}
+              max={4}
+              onChange={(d) => handleRoleChange("seerCount", d)}
+              isHost={isHost}
+              colorAccent="#7889A6"
+            />
+
+            <RoleStepper
+              label="Guard"
+              description="Night Protector"
+              value={guardCount}
+              min={0}
+              max={4}
+              onChange={(d) => handleRoleChange("guardCount", d)}
+              isHost={isHost}
+              colorAccent="#C6A66B"
+            />
+
+            <RoleStepper
+              label="Hunter"
+              description="Moonlit Archer"
+              value={hunterCount}
+              min={0}
+              max={4}
+              onChange={(d) => handleRoleChange("hunterCount", d)}
+              isHost={isHost}
+              colorAccent="#A7A2A0"
+            />
+
+            <RoleStepper
+              label="Witch"
+              description="Elixir and Poison"
+              value={witchCount}
+              min={0}
+              max={4}
+              onChange={(d) => handleRoleChange("witchCount", d)}
+              isHost={isHost}
+              colorAccent="#9B59B6"
+            />
+
+            {/* --- Troublemaker --- */}
+            <div className="config-section-label" style={{ marginTop: "12px" }}>Independent Faction</div>
+
             <div className="config-group">
               <div className="config-label-row">
-                <span className="config-label">Troublemaker Role</span>
+                <span className="config-label">Troublemaker</span>
                 <span className="config-desc">Chaos Faction</span>
               </div>
               {isHost ? (
                 <label className="checkbox-label">
                   <input
                     type="checkbox"
-                    checked={config.troublemakerEnabled}
+                    checked={troublemakerEnabled}
                     onChange={handleTroublemakerToggle}
                     style={{ position: "absolute", opacity: 0, pointerEvents: "none" }}
                     aria-label="Enable Troublemaker role"
                   />
                   <div
-                    className={`custom-checkbox ${
-                      config.troublemakerEnabled ? "is-checked" : ""
-                    }`}
+                    className={`custom-checkbox ${troublemakerEnabled ? "is-checked" : ""}`}
                     aria-hidden="true"
                   >
-                    {config.troublemakerEnabled && "✓"}
+                    {troublemakerEnabled && "✓"}
                   </div>
                   <div>
                     <span className="info-value">
-                      {config.troublemakerEnabled ? "Enabled" : "Disabled"}
+                      {troublemakerEnabled ? "Enabled" : "Disabled"}
                     </span>
                     <p className="config-desc">
-                      Independent agent who wins only by daytime execution. Increases required minimum to 9 players.
+                      Independent agent who wins only by daytime execution.
                     </p>
                   </div>
                 </label>
               ) : (
                 <p className="info-value">
-                  {config.troublemakerEnabled ? "Enabled (9 Players Required)" : "Disabled"}
+                  {troublemakerEnabled ? "Enabled" : "Disabled"}
                 </p>
               )}
             </div>
 
             {/* Discussion Timer */}
+            <div className="config-section-label" style={{ marginTop: "12px" }}>Session Settings</div>
+
             <div className="config-group">
               <div className="config-label-row">
                 <span className="config-label">Daytime Discussion</span>
@@ -238,7 +321,7 @@ export function LobbyScreen({
                   onChange={handleTimerChange}
                   aria-label="Select discussion duration"
                 >
-                  <option value={30}>30 Seconds (Testing Quick)</option>
+                  <option value={30}>30 Seconds</option>
                   <option value={60}>1 Minute</option>
                   <option value={120}>2 Minutes</option>
                   <option value={240}>4 Minutes (Standard)</option>
@@ -254,14 +337,12 @@ export function LobbyScreen({
 
             {/* Start Validation Banner */}
             <div
-              className={`validation-card ${
-                validation.valid ? "is-ready" : "is-waiting"
-              }`}
+              className={`validation-card ${validation.valid ? "is-ready" : "is-waiting"}`}
               role="status"
             >
               <h3 className="validation-title">
                 {validation.valid
-                  ? "✓ Chamber Ready to Hunt"
+                  ? "Chamber Ready to Hunt"
                   : "Requirements Remaining"}
               </h3>
               {!validation.valid && (
@@ -273,7 +354,7 @@ export function LobbyScreen({
               )}
               {validation.valid && (
                 <p className="config-desc" style={{ color: "var(--color-success)" }}>
-                  All requirements met: 1 Seer, 2 Guards, 2 Hunters, {config.werewolfCount} Werewolves, {config.troublemakerEnabled ? "1 Troublemaker, " : ""}and at least 1 Villager.
+                  {roleBreakdown.join(", ")}.
                 </p>
               )}
             </div>
@@ -281,14 +362,14 @@ export function LobbyScreen({
             {/* Start Button (Host only) */}
             {isHost ? (
               <>
-                {!validation.valid && onAddTestPlayers && (
+                {!import.meta.env.PROD && !validation.valid && onAddTestPlayers && (
                   <button
                     type="button"
                     className="btn-secondary"
                     style={{ width: "100%", marginTop: "12px", borderStyle: "dashed" }}
                     onClick={onAddTestPlayers}
                   >
-                    Summon Test Villagers (Dev Helper)
+                    Summon Test Villagers
                   </button>
                 )}
                 <button

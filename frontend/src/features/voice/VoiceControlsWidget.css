@@ -1,0 +1,131 @@
+.voice-controls-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(18, 19, 23, 0.85);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(216, 200, 168, 0.15);
+  border-radius: 9999px;
+  padding: 6px 14px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+  transition: all 0.25s ease;
+}
+
+.voice-controls-bar:hover {
+  border-color: rgba(216, 200, 168, 0.3);
+}
+
+.voice-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid rgba(216, 200, 168, 0.2);
+  background: rgba(30, 32, 38, 0.7);
+  color: #d8c8a8;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.voice-btn:hover {
+  background: rgba(45, 48, 58, 0.9);
+  border-color: #d8c8a8;
+  transform: translateY(-1px);
+}
+
+.voice-btn.is-muted {
+  background: rgba(141, 52, 59, 0.25);
+  border-color: #8d343b;
+  color: #ff6b6b;
+}
+
+.voice-btn.is-speaking {
+  border-color: #4cd964;
+  color: #4cd964;
+  box-shadow: 0 0 10px rgba(76, 217, 100, 0.4);
+  animation: pulse-speaking 1.2s infinite;
+}
+
+@keyframes pulse-speaking {
+  0% {
+    box-shadow: 0 0 0 0 rgba(76, 217, 100, 0.6);
+  }
+  70% {
+    box-shadow: 0 0 0 8px rgba(76, 217, 100, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(76, 217, 100, 0);
+  }
+}
+
+.voice-btn.is-deafened {
+  background: rgba(141, 52, 59, 0.25);
+  border-color: #8d343b;
+  color: #ff6b6b;
+}
+
+.voice-btn.spatial-active {
+  border-color: #c6a66b;
+  color: #c6a66b;
+}
+
+.voice-info-pill {
+  display: flex;
+  flex-direction: column;
+  padding-right: 6px;
+  border-right: 1px solid rgba(216, 200, 168, 0.1);
+}
+
+.voice-title {
+  font-family: var(--font-cinzel, "Cinzel", serif);
+  font-size: 11px;
+  letter-spacing: 0.05em;
+  color: #d8c8a8;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.voice-indicator-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #7889a6;
+}
+
+.voice-indicator-dot.active {
+  background: #4cd964;
+  box-shadow: 0 0 6px #4cd964;
+}
+
+.voice-subtitle {
+  font-size: 10px;
+  color: #a7a2a0;
+  font-family: var(--font-inter, sans-serif);
+}
+
+.voice-enable-btn {
+  background: linear-gradient(135deg, rgba(141, 52, 59, 0.8), rgba(95, 34, 40, 0.9));
+  border: 1px solid rgba(216, 200, 168, 0.3);
+  color: #f7f3e9;
+  border-radius: 9999px;
+  padding: 6px 14px;
+  font-size: 11px;
+  font-family: var(--font-cinzel, serif);
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+}
+
+.voice-enable-btn:hover {
+  background: linear-gradient(135deg, rgba(160, 58, 66, 0.9), rgba(110, 40, 46, 1));
+  box-shadow: 0 0 12px rgba(141, 52, 59, 0.5);
+  transform: translateY(-1px);
+}

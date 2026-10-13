@@ -386,3 +386,16 @@
   text-transform: uppercase;
   margin-top: 16px;
 }
+
+/* Role Configuration Section Labels */
+.config-section-label {
+  font-family: var(--font-display);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+  padding-bottom: 6px;
+  border-bottom: 1px solid rgba(216, 200, 168, 0.08);
+  margin-bottom: 2px;
+}

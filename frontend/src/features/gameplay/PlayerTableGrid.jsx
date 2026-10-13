@@ -1,4 +1,6 @@
+import { useState, useEffect } from "react";
 import { PLAYER_STATUS } from "../../constants/index.js";
+import { voiceChatService } from "../../services/voiceChatService.js";
 import "./PlayerTableGrid.css";
 
 export function PlayerTableGrid({
@@ -9,6 +11,14 @@ export function PlayerTableGrid({
   onSelectCandidate,
   hasVoted,
 }) {
+  const [speakingUsers, setSpeakingUsers] = useState([]);
+
+  useEffect(() => {
+    return voiceChatService.onSpeakingChange((users) => {
+      setSpeakingUsers(users);
+    });
+  }, []);
+
   return (
     <section className="player-grid-section" aria-label="Villagers Table">
       <ul className="player-grid">
@@ -17,6 +27,7 @@ export function PlayerTableGrid({
           const isSelf = player.id === currentUserId;
           const isSelected = selectedCandidateId === player.id;
           const canSelect = isVotingMode && isAlive && !isSelf && !hasVoted;
+          const isSpeaking = speakingUsers.includes(player.id);
 
           return (
             <li
@@ -25,7 +36,7 @@ export function PlayerTableGrid({
                 isSelf ? "is-self" : ""
               } ${isSelected ? "is-selected" : ""} ${
                 canSelect ? "is-interactive" : ""
-              }`}
+              } ${isSpeaking ? "is-speaking" : ""}`}
               onClick={() => {
                 if (canSelect && onSelectCandidate) {
                   onSelectCandidate(player.id);

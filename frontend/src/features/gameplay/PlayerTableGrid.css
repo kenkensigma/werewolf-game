@@ -118,3 +118,13 @@
   font-style: italic;
   margin-left: 4px;
 }
+
+.player-tile.is-speaking .player-avatar-frame {
+  border-color: #4cd964;
+  color: #4cd964;
+  box-shadow: 0 0 12px rgba(76, 217, 100, 0.6);
+}
+
+.player-tile.is-speaking .player-tile-name {
+  color: #4cd964;
+}
