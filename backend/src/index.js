@@ -1,5 +1,6 @@
 const express = require("express");
 const http = require("http");
+const path = require("path");
 const cors = require("cors");
 const { Server } = require("socket.io");
 const { registerRoomHandlers } = require("./socket/roomHandlers.js");
@@ -10,14 +11,14 @@ const app = express();
 const server = http.createServer(app);
 
 app.use(cors({
-  origin: process.env.FRONTEND_URL || "http://localhost:5173",
+  origin: "*",
 }));
 
 app.use(express.json());
 
 const io = new Server(server, {
   cors: {
-    origin: process.env.FRONTEND_URL || "http://localhost:5173",
+    origin: "*",
     methods: ["GET", "POST"],
   },
 });
@@ -25,6 +26,10 @@ const io = new Server(server, {
 app.get("/health", (req, res) => {
   res.json({ status: "ok" });
 });
+
+// Serve compiled frontend if available (same-origin production/tunnel deployment)
+const frontendDist = path.join(__dirname, "../../frontend/dist");
+app.use(express.static(frontendDist));
 
 io.on("connection", (socket) => {
   console.log(`Player connected: ${socket.id}`);
@@ -47,6 +52,16 @@ io.on("connection", (socket) => {
 
   socket.on("disconnect", () => {
     console.log(`Player disconnected: ${socket.id}`);
+  });
+});
+ 
+// Fallback to React index.html for all non-API and non-socket routes
+app.use((req, res, next) => {
+  if (req.path.startsWith("/socket.io") || req.path === "/health") {
+    return next();
+  }
+  res.sendFile(path.join(frontendDist, "index.html"), (err) => {
+    if (err) next();
   });
 });
 
